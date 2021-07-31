@@ -3,15 +3,28 @@
 #
 # Copyright (2005) Sandia Corporation.  Under the terms of Contract
 # DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-# certain rights in this software.  This software is distributed under 
+# certain rights in this software.  This software is distributed under
 # the GNU General Public License.
-
+#
 # ensight tool
+#
+#
+# History
+#   10/06, Steve Plimpton (SNL): original version
+#
+# ToDo list
+#   binary files
+#   create vector or tensor variable files, not just scalar
+#     via pair of args like ["vx","vy","vz"],"vel"
+#
+# Variables
+#   data = data file to read from
+#   which = 0 for particles, 1 for elements
+#   change = 0 for unchanging mesh coords, 1 for changing mesh coords (def = 0)
 
-oneline = "Convert LAMMPS snapshots or meshes to Ensight format"
-
-docstr = """
-e = ensight(d)	     d = object with atoms or elements (dump,data,mdump)
+"""
+Convert LAMMPS snapshots or meshes to Ensight format
+e = ensight(d)       d = object with atoms or elements (dump,data,mdump)
 e.change = 1         set to 1 if element nodal xyz change with time (def = 0)
 e.maxtype = 10       max particle type, set if query to data will be bad
 
@@ -37,474 +50,523 @@ e.many()             same args as one(), but create multiple Ensight files
 e.single(N)          same args as one() prepended by N, but write a single snap
 """
 
-# History
-#   10/06, Steve Plimpton (SNL): original version
-
-# ToDo list
-#   binary files
-#   create vector or tensor variable files, not just scalar
-#     via pair of args like ["vx","vy","vz"],"vel"
-
-# Variables
-#   data = data file to read from
-#   which = 0 for particles, 1 for elements
-#   change = 0 for unchanging mesh coords, 1 for changing mesh coords (def = 0)
-
 # Imports and external programs
 
-import sys, types
+import sys
+import types
 
 # Class definition
 
+
 class ensight:
 
-  # --------------------------------------------------------------------
+    # --------------------------------------------------------------------
 
-  def __init__(self,data):
-    self.change = 0
-    self.maxtype = 0
-    self.data = data
-    if type(data) is types.InstanceType and ".dump" in str(data.__class__):
-      self.which = 0
-    elif type(data) is types.InstanceType and ".data" in str(data.__class__):
-      self.which = 0
-    elif type(data) is types.InstanceType and ".mdump" in str(data.__class__):
-      self.which = 1
-    elif type(data) is types.InstanceType and ".cdata" in str(data.__class__):
-      self.which = 1
-    else:
-      raise StandardError,"unrecognized object passed to ensight"
-    
-  # --------------------------------------------------------------------
-
-  def one(self,*args):
-    if len(args) % 2 == 0: root = "tmp"
-    else: 
-      root = args[0]
-      args = args[1:]
-
-    pairs = []
-    for i in range(0,len(args),2): pairs.append([args[i],args[i+1]])
-
-    # max # of types for all steps in Ensight files
-
-    if self.which == 0 and self.maxtype == 0:
-      self.maxtype = self.data.maxtype()
-    
-    # write Ensight *.case header file
-
-    f = open("%s.case" % root,"w")
-    times = self.data.time()
-    self.case_file(f,root,pairs,0,len(times),times)
-    f.close()
-
-    # open additional files
-
-    f = open(root + ".xyz","w")
-    vfiles = []
-    for pair in pairs: vfiles.append(open(root + "." + pair[0],"w"))
-
-    # loop over snapshots
-    # write coords into xyz file, variables into their files
-
-    first = 1
-    n = flag = etype = 0
-    while 1:
-      which,time,flag = self.data.iterator(flag)
-      if flag == -1: break
-
-      if self.which == 0:
-        print >>f,"BEGIN TIME STEP"
-        time,box,atoms,bonds,tris,lines = self.data.viz(which)
-        self.coord_file_atoms(f,box,atoms)
-        print >>f,"END TIME STEP"
-      elif self.change == 0 and first:
-        print >>f,"BEGIN TIME STEP"
-        time,box,nodes,elements,nvalues,evalues = self.data.mviz(which)
-        self.coord_file_elements(f,box,nodes,elements)
-        etype = len(elements[0])
-        first = 0
-        print >>f,"END TIME STEP"
-      elif self.change:
-        print >>f,"BEGIN TIME STEP"
-        time,box,nodes,elements,nvalues,evalues = self.data.mviz(which)
-        self.coord_file_elements(f,box,nodes,elements)
-        etype = len(elements[0])
-        print >>f,"END TIME STEP"
-
-      for i in range(len(pairs)):
-        print >>vfiles[i],"BEGIN TIME STEP"
-        values = self.data.vecs(time,pairs[i][0])
-        if self.which == 0:
-          self.variable_file_atoms(vfiles[i],pairs[i][1],atoms,values)
+    def __init__(self, data):
+        self.change = 0
+        self.maxtype = 0
+        self.data = data
+        if type(data) is types.InstanceType and ".dump" in str(data.__class__):
+            self.which = 0
+        elif type(data) is types.InstanceType and ".data" in str(data.__class__):
+            self.which = 0
+        elif type(data) is types.InstanceType and ".mdump" in str(data.__class__):
+            self.which = 1
+        elif type(data) is types.InstanceType and ".cdata" in str(data.__class__):
+            self.which = 1
         else:
-          self.variable_file_elements(vfiles[i],pairs[i][1],etype,values)
-        print >>vfiles[i],"END TIME STEP"
-        
-      print time,
-      sys.stdout.flush()
-      n += 1
+            sys.exit("unrecognized object passed to ensight")
 
-    # close additional files
+    # --------------------------------------------------------------------
 
-    f.close()
-    for f in vfiles: f.close()
-
-    print "\nwrote %s snapshots in Ensight format" % n
-
-  # --------------------------------------------------------------------
-
-  def increment(self,*args):
-    if len(args) % 2 == 0: root = "tmp"
-    else: 
-      root = args[0]
-      args = args[1:]
-
-    pairs = []
-    for i in range(0,len(args),2): pairs.append([args[i],args[i+1]])
-
-    # max # of types for all steps in Ensight files
-
-    if self.which == 0 and self.maxtype == 0:
-      self.maxtype = self.data.maxtype()
-
-    # open additional files
-
-    f = open(root + ".xyz","w")
-    vfiles = []
-    for pair in pairs: vfiles.append(open(root + "." + pair[0],"w"))
-
-    # loop over snapshots
-    # write coords into xyz file, variables into their files
-
-    times = []
-    first = 1
-    n = etype = 0
-    while 1:
-      time = self.data.next()
-      if time == -1: break
-      times.append(time)
-      self.data.tselect.one(time)
-      self.data.delete()
-
-      if self.which == 0:
-        print >>f,"BEGIN TIME STEP"
-        time,box,atoms,bonds,tris,lines = self.data.viz(0)
-        self.coord_file_atoms(f,box,atoms)
-        print >>f,"END TIME STEP"
-      elif self.change == 0 and first:
-        print >>f,"BEGIN TIME STEP"
-        time,box,nodes,elements,nvalues,evalues = self.data.mviz(0)
-        self.coord_file_elements(f,box,nodes,elements)
-        etype = len(elements[0])
-        first = 0
-        print >>f,"END TIME STEP"
-      elif self.change:
-        print >>f,"BEGIN TIME STEP"
-        time,box,nodes,elements,nvalues,evalues = self.data.mviz(0)
-        self.coord_file_elements(f,box,nodes,elements)
-        etype = len(elements[0])
-        print >>f,"END TIME STEP"
-
-      for i in range(len(pairs)):
-        print >>vfiles[i],"BEGIN TIME STEP"
-        values = self.data.vecs(time,pairs[i][0])
-        if self.which == 0:
-          self.variable_file_atoms(vfiles[i],pairs[i][1],atoms,values)
+    def one(self, *args):
+        if len(args) % 2 == 0:
+            root = "tmp"
         else:
-          self.variable_file_elements(vfiles[i],pairs[i][1],etype,values)
-        print >>vfiles[i],"END TIME STEP"
-        
-      print time,
-      sys.stdout.flush()
-      n += 1
+            root = args[0]
+            args = args[1:]
 
-    # close additional files
+        pairs = []
+        for i in range(0, len(args), 2):
+            pairs.append([args[i], args[i + 1]])
 
-    f.close()
-    for f in vfiles: f.close()
+        # max # of types for all steps in Ensight files
 
-    # write Ensight *.case header file now that know all timesteps
+        if self.which == 0 and self.maxtype == 0:
+            self.maxtype = self.data.maxtype()
 
-    f = open("%s.case" % root,"w")
-    self.case_file(f,root,pairs,0,len(times),times)
-    f.close()
+        # write Ensight *.case header file
 
-    print "\nwrote %s snapshots in Ensight format" % n
-
-  # --------------------------------------------------------------------
-
-  def many(self,*args):
-    if len(args) % 2 == 0: root = "tmp"
-    else: 
-      root = args[0]
-      args = args[1:]
-
-    pairs = []
-    for i in range(0,len(args),2): pairs.append([args[i],args[i+1]])
-
-    # max # of types for all steps in Ensight files
-
-    if self.which == 0 and self.maxtype == 0:
-      self.maxtype = self.data.maxtype()
-
-    # write Ensight *.case header file
-
-    f = open("%s.case" % root,"w")
-    times = self.data.time()
-    self.case_file(f,root,pairs,1,len(times),times)
-    f.close()
-
-    # loop over snapshots
-    # generate unique filenames
-    # write coords into one xyz file per snapshot, variables into their files
-
-    first = 1
-    n = flag = etype = 0
-    while 1:
-      which,time,flag = self.data.iterator(flag)
-      if flag == -1: break
-
-      files = []
-      if n < 10:
-        file = root + "000" + str(n) + ".xyz"
-	for pair in pairs:
-	  files.append(root + "000" + str(n) + "." + pair[0])
-      elif n < 100:
-        file = root + "00" + str(n) + ".xyz"
-	for pair in pairs:
-	  files.append(root + "00" + str(n) + "." + pair[0])
-      elif n < 1000:
-        file = root + "0" + str(n) + ".xyz"
-	for pair in pairs:
-	  files.append(root + "0" + str(n) + "." + pair[0])
-      else:
-        file = root + str(n) + ".xyz"
-	for pair in pairs:
-	  files.append(root + str(n) + "." + pair[0])
-
-      if self.which == 0:
-        f = open(file,"w")
-        time,box,atoms,bonds,tris,lines = self.data.viz(which)
-        self.coord_file_atoms(f,box,atoms)
-        f.close()
-      elif self.change == 0 and first:
-        f = open(root + ".xyz","w")
-        time,box,nodes,elements,nvalues,evalues = self.data.mviz(which)
-        self.coord_file_elements(f,box,nodes,elements)
-        etype = len(elements[0])
-        first = 0
-        f.close()
-      elif self.change:
-        f = open(file,"w")
-        time,box,nodes,elements,nvalues,evalues = self.data.mviz(which)
-        self.coord_file_elements(f,box,nodes,elements)
-        etype = len(elements[0])
+        f = open("%s.case" % root, "w")
+        times = self.data.time()
+        self.case_file(f, root, pairs, 0, len(times), times)
         f.close()
 
-      for i in range(len(pairs)):
-        values = self.data.vecs(time,pairs[i][0])
-        f = open(files[i],"w")
-        if self.which == 0:
-          self.variable_file_atoms(f,pairs[i][1],atoms,values)
+        # open additional files
+
+        f = open(root + ".xyz", "w")
+        vfiles = []
+        for pair in pairs:
+            vfiles.append(open(root + "." + pair[0], "w"))
+
+        # loop over snapshots
+        # write coords into xyz file, variables into their files
+
+        first = 1
+        n = flag = etype = 0
+        while 1:
+            which, time, flag = self.data.iterator(flag)
+            if flag == -1:
+                break
+
+            if self.which == 0:
+                f.write("BEGIN TIME STEP\n")
+                time, box, atoms, bonds, tris, lines = self.data.viz(which)
+                self.coord_file_atoms(f, box, atoms)
+                f.write("END TIME STEP\n")
+            elif self.change == 0 and first:
+                f.write("BEGIN TIME STEP\n")
+                time, box, nodes, elements, nvalues, evalues = self.data.mviz(which)
+                self.coord_file_elements(f, box, nodes, elements)
+                etype = len(elements[0])
+                first = 0
+                f.write("END TIME STEP\n")
+            elif self.change:
+                f.write("BEGIN TIME STEP\n")
+                time, box, nodes, elements, nvalues, evalues = self.data.mviz(which)
+                self.coord_file_elements(f, box, nodes, elements)
+                etype = len(elements[0])
+                f.write("END TIME STEP\n")
+
+            for i in range(len(pairs)):
+                vfiles[i].write("BEGIN TIME STEP\n")
+                values = self.data.vecs(time, pairs[i][0])
+                if self.which == 0:
+                    self.variable_file_atoms(vfiles[i], pairs[i][1], atoms, values)
+                else:
+                    self.variable_file_elements(vfiles[i], pairs[i][1], etype, values)
+                vfiles[i].write("END TIME STEP\n")
+
+            print(time)
+            sys.stdout.flush()
+            n += 1
+
+        # close additional files
+
+        f.close()
+        for f in vfiles:
+            f.close()
+
+        print("\nwrote %s snapshots in Ensight format" % n)
+
+    # --------------------------------------------------------------------
+
+    def increment(self, *args):
+        if len(args) % 2 == 0:
+            root = "tmp"
         else:
-          self.variable_file_elements(f,pairs[i][1],etype,values)
-	f.close()
+            root = args[0]
+            args = args[1:]
 
-      print time,
-      sys.stdout.flush()
-      n += 1
-  
-    print "\nwrote %s snapshots in Ensight format" % n
+        pairs = []
+        for i in range(0, len(args), 2):
+            pairs.append([args[i], args[i + 1]])
 
-  # --------------------------------------------------------------------
+        # max # of types for all steps in Ensight files
 
-  def single(self,time,*args):
-    if len(args) % 2 == 0: root = "tmp"
-    else: 
-      root = args[0]
-      args = args[1:]
+        if self.which == 0 and self.maxtype == 0:
+            self.maxtype = self.data.maxtype()
 
-    pairs = []
-    for i in range(0,len(args),2): pairs.append([args[i],args[i+1]])
+        # open additional files
 
-    # max # of types for all steps in Ensight files
+        f = open(root + ".xyz", "w")
+        vfiles = []
+        for pair in pairs:
+            vfiles.append(open(root + "." + pair[0], "w"))
 
-    if self.which == 0 and self.maxtype == 0:
-      self.maxtype = self.data.maxtype()
+        # loop over snapshots
+        # write coords into xyz file, variables into their files
 
-    # write Ensight *.case header file
+        times = []
+        first = 1
+        n = etype = 0
+        while 1:
+            time = self.data.next()
+            if time == -1:
+                break
+            times.append(time)
+            self.data.tselect.one(time)
+            self.data.delete()
 
-    f = open("%s.case" % root,"w")
-    self.case_file(f,root,pairs,0,1,[time])
-    f.close()
+            if self.which == 0:
+                f.write("BEGIN TIME STEP\n")
+                time, box, atoms, bonds, tris, lines = self.data.viz(0)
+                self.coord_file_atoms(f, box, atoms)
+                f.write("END TIME STEP\n")
+            elif self.change == 0 and first:
+                f.write("BEGIN TIME STEP\n")
+                time, box, nodes, elements, nvalues, evalues = self.data.mviz(0)
+                self.coord_file_elements(f, box, nodes, elements)
+                etype = len(elements[0])
+                first = 0
+                f.write("END TIME STEP\n")
+            elif self.change:
+                f.write("BEGIN TIME STEP\n")
+                time, box, nodes, elements, nvalues, evalues = self.data.mviz(0)
+                self.coord_file_elements(f, box, nodes, elements)
+                etype = len(elements[0])
+                f.write("END TIME STEP\n")
 
-    # write coords into xyz file, variables into their files
+            for i in range(len(pairs)):
+                vfiles[i].write("BEGIN TIME STEP\n")
+                values = self.data.vecs(time, pairs[i][0])
+                if self.which == 0:
+                    self.variable_file_atoms(vfiles[i], pairs[i][1], atoms, values)
+                else:
+                    self.variable_file_elements(vfiles[i], pairs[i][1], etype, values)
+                vfiles[i].write("END TIME STEP\n")
 
-    which = self.data.findtime(time)
-    etype = 0
-    
-    f = open(root + ".xyz","w")
-    if self.which == 0:
-      time,box,atoms,bonds,tris,lines = self.data.viz(which)
-      self.coord_file_atoms(f,box,atoms)
-    else:
-      time,box,nodes,elements,nvalues,evalues = self.data.mviz(which)
-      self.coord_file_elements(f,box,nodes,elements)
-      etype = len(elements[0])
-    f.close()
-    
-    for i in range(len(pairs)):
-      values = self.data.vecs(time,pairs[i][0])
-      f = open(root + "." + pairs[i][0],"w")
-      if self.which == 0:
-        self.variable_file_atoms(f,pairs[i][1],atoms,values)
-      else:
-        self.variable_file_elements(f,pairs[i][1],etype,values)
-      f.close()
-      
-  # --------------------------------------------------------------------
-  # write Ensight case file
+            print(time)
+            sys.stdout.flush()
+            n += 1
 
-  def case_file(self,f,root,pairs,multifile,nsnaps,times):
-    print >>f,"# Ensight case file\n"
-    print >>f,"FORMAT\ntype: ensight gold\n"
-    
-    if self.which == 0:
-      if multifile:
-#        print >>f,"GEOMETRY\nmodel: %s****.xyz change_coords_only\n" % root
-        print >>f,"GEOMETRY\nmodel: %s****.xyz\n" % root
-      else:
-#        print >>f,"GEOMETRY\nmodel: 1 1 %s.xyz change_coords_only\n" % root
-        print >>f,"GEOMETRY\nmodel: 1 1 %s.xyz\n" % root
-    else:
-      if self.change == 0:
-        print >>f,"GEOMETRY\nmodel: %s.xyz\n" % root
-      elif multifile:
-        print >>f,"GEOMETRY\nmodel: %s****.xyz\n" % root
-      else:
-        print >>f,"GEOMETRY\nmodel: 1 1 %s.xyz\n" % root
+        # close additional files
 
-    if len(pairs):
-      print >>f,"VARIABLE"
-      for pair in pairs:
-        if self.which == 0:
-          if multifile:
-            print >>f,"scalar per node: %s %s****.%s" % (pair[1],root,pair[0])
-          else:
-            print >>f,"scalar per node: 1 1 %s %s.%s" % (pair[1],root,pair[0])
+        f.close()
+        for f in vfiles:
+            f.close()
+
+        # write Ensight *.case header file now that know all timesteps
+
+        f = open("%s.case" % root, "w")
+        self.case_file(f, root, pairs, 0, len(times), times)
+        f.close()
+
+        print("\nwrote %s snapshots in Ensight format" % n)
+
+    # --------------------------------------------------------------------
+
+    def many(self, *args):
+        if len(args) % 2 == 0:
+            root = "tmp"
         else:
-          if multifile:
-            print >>f,"scalar per element: %s %s****.%s" % (pair[1],root,pair[0])
-          else:
-            print >>f,"scalar per element: 1 1 %s %s.%s" % (pair[1],root,pair[0])
-      print >>f
+            root = args[0]
+            args = args[1:]
 
-    print >>f,"TIME"
-    print >>f,"time set: 1"
-    print >>f,"number of steps:",nsnaps
-    print >>f,"filename start number: 0"
-    print >>f,"filename increment: 1"
-    print >>f,"time values:"
-    for i in range(nsnaps):
-      print >>f,times[i],
-      if i % 10 == 9: print >>f
-    print >>f
-    print >>f
-    
-    if not multifile:
-      print >>f,"FILE"
-      print >>f,"file set: 1"
-      print >>f,"number of steps:",nsnaps
+        pairs = []
+        for i in range(0, len(args), 2):
+            pairs.append([args[i], args[i + 1]])
 
-  # --------------------------------------------------------------------
-  # write Ensight coordinates for atoms
-  # partition into "parts"
-  # one part = coords for all atoms of a single type
+        # max # of types for all steps in Ensight files
 
-  def coord_file_atoms(self,f,box,atoms):
-    print >>f,"Particle geometry\nfor a collection of atoms"
-    print >>f,"node id given"
-    print >>f,"element id off"
-    print >>f,"extents"
-    print >>f,"%12.5e%12.5e" % (box[0],box[3])
-    print >>f,"%12.5e%12.5e" % (box[1],box[4])
-    print >>f,"%12.5e%12.5e" % (box[2],box[5])
+        if self.which == 0 and self.maxtype == 0:
+            self.maxtype = self.data.maxtype()
 
-    for type in xrange(1,self.maxtype+1):
-      print >>f,"part"
-      print >>f,"%10d" % type
-      print >>f,"type",type
-      print >>f,"coordinates"
-      group = [atom for atom in atoms if int(atom[1]) == type]
-      print >>f,"%10d" % len(group)
-      for atom in group: print >>f,"%10d" % int(atom[0])
-      for atom in group: print >>f,"%12.5e" % atom[2]
-      for atom in group: print >>f,"%12.5e" % atom[3]
-      for atom in group: print >>f,"%12.5e" % atom[4]
-      print >>f,"point"
-      print >>f,"%10d" % len(group)
-      for i in xrange(1,len(group)+1): print >>f,"%10d" % i
+        # write Ensight *.case header file
 
-  # --------------------------------------------------------------------
-  # write Ensight coordinates for elements
+        f = open("%s.case" % root, "w")
+        times = self.data.time()
+        self.case_file(f, root, pairs, 1, len(times), times)
+        f.close()
 
-  def coord_file_elements(self,f,box,nodes,elements):
-    print >>f,"Element geometry\nfor a collection of elements"
-    print >>f,"node id given"
-    print >>f,"element id given"
-    print >>f,"extents"
-    print >>f,"%12.5e%12.5e" % (box[0],box[3])
-    print >>f,"%12.5e%12.5e" % (box[1],box[4])
-    print >>f,"%12.5e%12.5e" % (box[2],box[5])
+        # loop over snapshots
+        # generate unique filenames
+        # write coords into one xyz file per snapshot, variables into their files
 
-    print >>f,"part"
-    print >>f,"%10d" % 1
-    print >>f,"all elements"
-    print >>f,"coordinates"
-    print >>f,"%10d" % len(nodes)
-    for node in nodes: print >>f,"%10d" % int(node[0])
-    for node in nodes: print >>f,"%12.5e" % node[2]
-    for node in nodes: print >>f,"%12.5e" % node[3]
-    for node in nodes: print >>f,"%12.5e" % node[4]
+        first = 1
+        n = flag = etype = 0
+        while 1:
+            which, time, flag = self.data.iterator(flag)
+            if flag == -1:
+                break
 
-    if len(elements[0]) == 5: print >>f,"tria3"
-    elif len(elements[0]) == 6: print >>f,"tetra4"
-    else: raise StandardError,"unrecognized element type"
-    print >>f,"%10d" % len(elements)
+            files = []
+            if n < 10:
+                file = root + "000" + str(n) + ".xyz"
+                for pair in pairs:
+                    files.append(root + "000" + str(n) + "." + pair[0])
+            elif n < 100:
+                file = root + "00" + str(n) + ".xyz"
+                for pair in pairs:
+                    files.append(root + "00" + str(n) + "." + pair[0])
+            elif n < 1000:
+                file = root + "0" + str(n) + ".xyz"
+                for pair in pairs:
+                    files.append(root + "0" + str(n) + "." + pair[0])
+            else:
+                file = root + str(n) + ".xyz"
+                for pair in pairs:
+                    files.append(root + str(n) + "." + pair[0])
 
-    for element in elements: print >>f,"%10d" % int(element[0])
-    if len(elements[0]) == 5:
-      for element in elements:
-        print >>f,"%10d%10d%10d" % \
-              (int(element[2]),int(element[3]),int(element[4]))
-    elif len(elements[0]) == 6:
-      for element in elements:
-        print >>f,"%10d%10d%10d%10d" % \
-              (int(element[2]),int(element[3]),int(element[4]),int(element[5]))
+            if self.which == 0:
+                f = open(file, "w")
+                time, box, atoms, bonds, tris, lines = self.data.viz(which)
+                self.coord_file_atoms(f, box, atoms)
+                f.close()
+            elif self.change == 0 and first:
+                f = open(root + ".xyz", "w")
+                time, box, nodes, elements, nvalues, evalues = self.data.mviz(which)
+                self.coord_file_elements(f, box, nodes, elements)
+                etype = len(elements[0])
+                first = 0
+                f.close()
+            elif self.change:
+                f = open(file, "w")
+                time, box, nodes, elements, nvalues, evalues = self.data.mviz(which)
+                self.coord_file_elements(f, box, nodes, elements)
+                etype = len(elements[0])
+                f.close()
 
-  # --------------------------------------------------------------------
-  # write Ensight variable values for atoms
-  # partition into "parts"
-  # one part = values for all atoms of a single type
+            for i in range(len(pairs)):
+                values = self.data.vecs(time, pairs[i][0])
+                f = open(files[i], "w")
+                if self.which == 0:
+                    self.variable_file_atoms(f, pairs[i][1], atoms, values)
+                else:
+                    self.variable_file_elements(f, pairs[i][1], etype, values)
+                f.close()
 
-  def variable_file_atoms(self,f,name,atoms,values):
-    print >>f,"Particle %s" % name
-    for type in xrange(1,self.maxtype+1):
-      print >>f,"part"
-      print >>f,"%10d" % type
-      print >>f,"coordinates"
-      group = [values[i] for i in xrange(len(atoms))
-               if int(atoms[i][1]) == type]
-      for value in group: print >>f,"%12.5e" % value
+            print(time)
+            sys.stdout.flush()
+            n += 1
 
-  # --------------------------------------------------------------------
-  # write Ensight variable values for elements
+        print("\nwrote %s snapshots in Ensight format" % n)
 
-  def variable_file_elements(self,f,name,etype,values):
-    print >>f,"Element %s" % name
-    print >>f,"part"
-    print >>f,"%10d" % 1
-    if etype == 5: print >>f,"tria3"
-    elif etype == 6: print >>f,"tetra4"
-    for value in values: print >>f,"%12.5e" % value
+    # --------------------------------------------------------------------
+
+    def single(self, time, *args):
+        if len(args) % 2 == 0:
+            root = "tmp"
+        else:
+            root = args[0]
+            args = args[1:]
+
+        pairs = []
+        for i in range(0, len(args), 2):
+            pairs.append([args[i], args[i + 1]])
+
+        # max # of types for all steps in Ensight files
+
+        if self.which == 0 and self.maxtype == 0:
+            self.maxtype = self.data.maxtype()
+
+        # write Ensight *.case header file
+
+        f = open("%s.case" % root, "w")
+        self.case_file(f, root, pairs, 0, 1, [time])
+        f.close()
+
+        # write coords into xyz file, variables into their files
+
+        which = self.data.findtime(time)
+        etype = 0
+
+        f = open(root + ".xyz", "w")
+        if self.which == 0:
+            time, box, atoms, bonds, tris, lines = self.data.viz(which)
+            self.coord_file_atoms(f, box, atoms)
+        else:
+            time, box, nodes, elements, nvalues, evalues = self.data.mviz(which)
+            self.coord_file_elements(f, box, nodes, elements)
+            etype = len(elements[0])
+        f.close()
+
+        for i in range(len(pairs)):
+            values = self.data.vecs(time, pairs[i][0])
+            f = open(root + "." + pairs[i][0], "w")
+            if self.which == 0:
+                self.variable_file_atoms(f, pairs[i][1], atoms, values)
+            else:
+                self.variable_file_elements(f, pairs[i][1], etype, values)
+            f.close()
+
+    # --------------------------------------------------------------------
+    # write Ensight case file
+
+    def case_file(self, f, root, pairs, multifile, nsnaps, times):
+        f.write("# Ensight case file\n")
+        f.write("FORMAT\ntype: ensight gold\n")
+
+        if self.which == 0:
+            if multifile:
+                #        print >>f,"GEOMETRY\nmodel: %s****.xyz change_coords_only\n" % root
+                f.write("GEOMETRY\nmodel: %s****.xyz\n" % root)
+            else:
+                #        print >>f,"GEOMETRY\nmodel: 1 1 %s.xyz change_coords_only\n" % root
+                f.write("GEOMETRY\nmodel: 1 1 %s.xyz\n" % root)
+        else:
+            if self.change == 0:
+                f.write("GEOMETRY\nmodel: %s.xyz\n" % root)
+            elif multifile:
+                f.write("GEOMETRY\nmodel: %s****.xyz\n" % root)
+            else:
+                f.write("GEOMETRY\nmodel: 1 1 %s.xyz\n" % root)
+
+        if len(pairs):
+            f.write("VARIABLE\n")
+            for pair in pairs:
+                if self.which == 0:
+                    if multifile:
+                        f.write("scalar per node: %s %s****.%s\n" % (
+                            pair[1],
+                            root,
+                            pair[0],
+                            )
+                        )
+                    else:
+                        f.write("scalar per node: 1 1 %s %s.%s\n" % (
+                            pair[1],
+                            root,
+                            pair[0],
+                            )
+                        )
+                else:
+                    if multifile:
+                        f.write("scalar per element: %s %s****.%s\n" % (
+                            pair[1],
+                            root,
+                            pair[0],
+                            )
+                        )
+                    else:
+                        f.write("scalar per element: 1 1 %s %s.%s\n" % (
+                            pair[1],
+                            root,
+                            pair[0],
+                            )
+                        )
+
+        f.write("TIME\n")
+        f.write("time set: 1\n")
+        f.write("number of steps: {}\n".format(nsnaps))
+        f.write("filename start number: 0\n")
+        f.write("filename increment: 1\n")
+        f.write("time values:\n")
+        for i in range(nsnaps):
+            f.write("{}\n".format(times[i]))
+            if i % 10 == 9:
+                f.write("\n")
+        f.write("\n")
+        f.write("\n")
+
+        if not multifile:
+            f.write("FILE\n")
+            f.write("file set: 1\n")
+            f.write("number of steps: {}\n".format(nsnaps))
+
+    # --------------------------------------------------------------------
+    # write Ensight coordinates for atoms
+    # partition into "parts"
+    # one part = coords for all atoms of a single type
+
+    def coord_file_atoms(self, f, box, atoms):
+        f.write("Particle geometry\nfor a collection of atoms\n")
+        f.write("node id given\n")
+        f.write("element id off\n")
+        f.write("extents\n")
+        f.write("%12.5e%12.5e\n" % (box[0], box[3]))
+        f.write("%12.5e%12.5e\n" % (box[1], box[4]))
+        f.write("%12.5e%12.5e\n" % (box[2], box[5]))
+
+        for t in range(1, self.maxtype + 1):
+            f.write("part\n")
+            f.write("%10d\n" % t)
+            f.write("type\n", t)
+            f.write("coordinates\n")
+            group = [atom for atom in atoms if int(atom[1]) == t]
+            f.write("%10d\n" % len(group))
+            for atom in group:
+                f.write("%10d\n" % int(atom[0]))
+            for atom in group:
+                f.write("%12.5e\n" % atom[2])
+            for atom in group:
+                f.write("%12.5e\n" % atom[3])
+            for atom in group:
+                f.write("%12.5e\n" % atom[4])
+            f.write("point\n")
+            f.write("%10d\n" % len(group))
+            for i in range(1, len(group) + 1):
+                f.write("%10d\n" % i)
+
+    # --------------------------------------------------------------------
+    # write Ensight coordinates for elements
+
+    def coord_file_elements(self, f, box, nodes, elements):
+        f.write("Element geometry\nfor a collection of elements\n")
+        f.write("node id given\n")
+        f.write("element id given\n")
+        f.write("extents\n")
+        f.write("%12.5e%12.5e\n" % (box[0], box[3]))
+        f.write("%12.5e%12.5e\n" % (box[1], box[4]))
+        f.write("%12.5e%12.5e\n" % (box[2], box[5]))
+
+        f.write("part\n")
+        f.write("%10d\n" % 1)
+        f.write("all elements\n")
+        f.write("coordinates\n")
+        f.write("%10d\n" % len(nodes))
+        for node in nodes:
+            f.write("%10d\n" % int(node[0]))
+        for node in nodes:
+            f.write("%12.5e\n" % node[2])
+        for node in nodes:
+            f.write("%12.5e\n" % node[3])
+        for node in nodes:
+            f.write("%12.5e\n" % node[4])
+
+        if len(elements[0]) == 5:
+            f.write("tria3\n")
+        elif len(elements[0]) == 6:
+            f.write("tetra4\n")
+        else:
+            sys.exit("unrecognized element type")
+        f.write("%10d\n" % len(elements))
+
+        for element in elements:
+            f.write("%10d\n" % int(element[0]))
+        if len(elements[0]) == 5:
+            for element in elements:
+                f.write("%10d%10d%10d\n" % (
+                    int(element[2]),
+                    int(element[3]),
+                    int(element[4]),
+                    )
+                )
+        elif len(elements[0]) == 6:
+            for element in elements:
+                f.write("%10d%10d%10d%10d\n" % (
+                    int(element[2]),
+                    int(element[3]),
+                    int(element[4]),
+                    int(element[5]),
+                    )
+                )
+
+    # --------------------------------------------------------------------
+    # write Ensight variable values for atoms
+    # partition into "parts"
+    # one part = values for all atoms of a single type
+
+    def variable_file_atoms(self, f, name, atoms, values):
+        f.write("Particle %s\n" % name)
+        for t in range(1, self.maxtype + 1):
+            f.write("part\n")
+            f.write("%10d\n" % t)
+            f.write("coordinates\n")
+            group = [values[i] for i in range(len(atoms)) if int(atoms[i][1]) == t]
+            for value in group:
+                f.write("%12.5e\n" % value)
+
+    # --------------------------------------------------------------------
+    # write Ensight variable values for elements
+
+    def variable_file_elements(self, f, name, etype, values):
+        f.write("Element %s\n" % name)
+        f.write("part\n")
+        f.write("%10d\n" % 1)
+        if etype == 5:
+            f.write("tria3\n")
+        elif etype == 6:
+            f.write("tetra4\n")
+        for value in values:
+            f.write("%12.5e\n" % value)

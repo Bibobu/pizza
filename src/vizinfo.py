@@ -3,7 +3,7 @@
 #
 # Copyright (2005) Sandia Corporation.  Under the terms of Contract
 # DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-# certain rights in this software.  This software is distributed under 
+# certain rights in this software.  This software is distributed under
 # the GNU General Public License.
 
 # vizinfo class, not a top-level Pizza.py tool
@@ -18,231 +18,256 @@
 
 # Imports and external programs
 
-import types
+# import types
+import itertools
 
 # Class definition
 
+
 class vizinfo:
-  """
-  Information holder for Pizza.py visualization tools
-  
-  acolor,bcolor,tcolor,lcolor = RGB values for each atom/bond/tri/line type
-  arad = radius of each atom type
-  brad,lrad = thickness of each bond/line type
-  tfill = fill flag for each triangle type
+    """
+    Information holder for Pizza.py visualization tools
 
-  all of these arrays are indexed by object type which runs 1-Ntype
-  nacolor,nbcolor,ntcolor,nlcolor,narad,nbrad,nlrad,ntfill
-    are # of types each array holds
-  actual length is nacolor+1 so that array can be indexed by 1-Ntype
+    acolor,bcolor,tcolor,lcolor = RGB values for each atom/bond/tri/line type
+    arad = radius of each atom type
+    brad,lrad = thickness of each bond/line type
+    tfill = fill flag for each triangle type
 
-  setcolors() = set atom/bond/tri/line colors
-  setradii() = set atom/bond/line radii/thickness
-  setfill() = set triangle fill factor
-  extend() = grow an array
-  """
-  
-  # --------------------------------------------------------------------
+    all of these arrays are indexed by object type which runs 1-Ntype
+    nacolor,nbcolor,ntcolor,nlcolor,narad,nbrad,nlrad,ntfill
+      are # of types each array holds
+    actual length is nacolor+1 so that array can be indexed by 1-Ntype
 
-  def __init__(self):
-     self.acolor = []
-     self.arad = []
-     self.bcolor = []
-     self.brad = []
-     self.tcolor = []
-     self.tfill = []
-     self.lcolor = []
-     self.lrad = []
-     self.nacolor = self.narad = 0
-     self.nbcolor = self.nbrad = 0
-     self.ntcolor = self.ntfill = 0
-     self.nlcolor = self.nlrad = 0
-     
-  # --------------------------------------------------------------------
-  # set color RGB for which = atoms, bonds, triangles
-  
-  def setcolors(self,which,ids,rgbs):
+    setcolors() = set atom/bond/tri/line colors
+    setradii() = set atom/bond/line radii/thickness
+    setfill() = set triangle fill factor
+    extend() = grow an array
+    """
 
-    # convert args into lists if single values
-    # if arg = 0, convert to full-range list
-    
-    if type(ids) is types.IntType and ids == 0:
-      if which == "atom": ids = range(self.nacolor)
-      if which == "bond": ids = range(self.nbcolor)
-      if which == "tri": ids = range(self.ntcolor)
-      if which == "line": ids = range(self.nlcolor)
-    if type(ids) is not types.ListType and type(ids) is not types.TupleType:
-      ids = [ids]
-    if type(rgbs) is not types.ListType and type(rgbs) is not types.TupleType:
-      rgbs = [rgbs]
+    # --------------------------------------------------------------------
 
-    # if list of types has a 0, increment each type value
+    def __init__(self):
+        self.acolor = []
+        self.arad = []
+        self.bcolor = []
+        self.brad = []
+        self.tcolor = []
+        self.tfill = []
+        self.lcolor = []
+        self.lrad = []
+        self.nacolor = self.narad = 0
+        self.nbcolor = self.nbrad = 0
+        self.ntcolor = self.ntfill = 0
+        self.nlcolor = self.nlrad = 0
 
-    if 0 in ids:
-      for i in xrange(len(ids)): ids[i] += 1
+    # --------------------------------------------------------------------
+    # set color RGB for which = atoms, bonds, triangles
 
-    # extend storage list if necessary
-    # extend other arrays for same "which" so that gl::make_atom_calllist
-    #   has valid arrays to work with
+    def setcolors(self, which, ids, rgbs):
 
-    if which == "atom":
-      if max(ids) > self.nacolor:
-        self.nacolor = self.extend(self.acolor,max(ids))
-        self.nacolor = self.extend(self.arad,max(ids))
-    if which == "bond":
-      if max(ids) > self.nbcolor:
-        self.nbcolor = self.extend(self.bcolor,max(ids))
-        self.nbcolor = self.extend(self.brad,max(ids))
-    if which == "tri":
-      if max(ids) > self.ntcolor:
-        self.ntcolor = self.extend(self.tcolor,max(ids))
-        self.ntcolor = self.extend(self.tfill,max(ids))
-    if which == "line":
-      if max(ids) > self.nlcolor:
-        self.nlcolor = self.extend(self.lcolor,max(ids))
-        self.nlcolor = self.extend(self.lrad,max(ids))
-    
-    # set color for each type
-    # if list lengths match, set directly, else interpolate
-    # convert final color from 0-255 to 0.0-1.0
-    
-    ntypes = len(ids)
-    nrgbs = len(rgbs)
+        # convert args into lists if single values
+        # if arg = 0, convert to full-range list
 
-    for i in xrange(ntypes):
-      id = ids[i]
+        if isinstance(ids, int) and ids == 0:
+            if which == "atom":
+                ids = list(range(self.nacolor))
+            if which == "bond":
+                ids = list(range(self.nbcolor))
+            if which == "tri":
+                ids = list(range(self.ntcolor))
+            if which == "line":
+                ids = list(range(self.nlcolor))
+        if not isinstance(ids, list) and not isinstance(ids, tuple):
+            ids = [ids]
+        if not isinstance(rgbs, list) and not isinstance(rgbs, tuple):
+            rgbs = [rgbs]
 
-      if rgbs[0] == "loop":
-        list = colors.keys()
-        red,green,blue = colors[list[i % len(colors)]]
-      elif ntypes == nrgbs:
-        red,green,blue = colors[rgbs[i]]
-      else:
-        r = i/float(ntypes-1) * float(nrgbs-1)
-        jlo = int(r)
-        jhi = jlo + 1
-        if jhi == nrgbs: jhi = nrgbs - 1
-        clo = colors[rgbs[jlo]]
-        chi = colors[rgbs[jhi]]
-        delta = r - jlo
-        red = clo[0] + delta*(chi[0]-clo[0])
-        green = clo[1] + delta*(chi[1]-clo[1])
-        blue = clo[2] + delta*(chi[2]-clo[2])
+        # if list of types has a 0, increment each type value
 
-      color = [red/255.0,green/255.0,blue/255.0]
+        if 0 in ids:
+            for i in range(len(ids)):
+                ids[i] += 1
 
-      if which == "atom": self.acolor[id] = color
-      if which == "bond": self.bcolor[id] = color
-      if which == "tri":  self.tcolor[id] = color
-      if which == "line": self.lcolor[id] = color
-  
-  # --------------------------------------------------------------------
-  # set radii for which = atoms, bonds, lines
+        # extend storage list if necessary
+        # extend other arrays for same "which" so that gl::make_atom_calllist
+        #   has valid arrays to work with
 
-  def setradii(self,which,ids,radii):
+        if which == "atom":
+            if max(ids) > self.nacolor:
+                self.nacolor = self.extend(self.acolor, max(ids))
+                self.nacolor = self.extend(self.arad, max(ids))
+        if which == "bond":
+            if max(ids) > self.nbcolor:
+                self.nbcolor = self.extend(self.bcolor, max(ids))
+                self.nbcolor = self.extend(self.brad, max(ids))
+        if which == "tri":
+            if max(ids) > self.ntcolor:
+                self.ntcolor = self.extend(self.tcolor, max(ids))
+                self.ntcolor = self.extend(self.tfill, max(ids))
+        if which == "line":
+            if max(ids) > self.nlcolor:
+                self.nlcolor = self.extend(self.lcolor, max(ids))
+                self.nlcolor = self.extend(self.lrad, max(ids))
 
-    # convert args into lists if single values
-    # if arg = 0, convert to full-range list
-    
-    if type(ids) is types.IntType and ids == 0:
-      if which == "atom": ids = range(self.narad)
-      if which == "bond": ids = range(self.nbrad)
-      if which == "line": ids = range(self.nlrad)
-    if type(ids) is not types.ListType and type(ids) is not types.TupleType:
-      ids = [ids]
-    if type(radii) is not types.ListType and \
-           type(radii) is not types.TupleType:
-      radii = [radii]
+        # set color for each type
+        # if list lengths match, set directly, else interpolate
+        # convert final color from 0-255 to 0.0-1.0
 
-    # if list of types has a 0, increment each type value
+        ntypes = len(ids)
+        nrgbs = len(rgbs)
 
-    if 0 in ids:
-      for i in xrange(len(ids)): ids[i] += 1
+        for i in range(ntypes):
+            atid = ids[i]
 
-    # extend storage list if necessary
-    # extend other arrays for same "which" so that gl::make_atom_calllist
-    #   has valid arrays to work with
+            if rgbs[0] == "loop":
+                # clist = colors.keys()
+                # red, green, blue = colors[clist[i % len(colors)]]
+                red, green, blue = colors[next(clist)]
+            elif ntypes == nrgbs:
+                red, green, blue = colors[rgbs[i]]
+            else:
+                r = i / float(ntypes - 1) * float(nrgbs - 1)
+                jlo = int(r)
+                jhi = jlo + 1
+                if jhi == nrgbs:
+                    jhi = nrgbs - 1
+                clo = colors[rgbs[jlo]]
+                chi = colors[rgbs[jhi]]
+                delta = r - jlo
+                red = clo[0] + delta * (chi[0] - clo[0])
+                green = clo[1] + delta * (chi[1] - clo[1])
+                blue = clo[2] + delta * (chi[2] - clo[2])
 
-    if which == "atom":
-      if max(ids) > self.narad:
-        self.narad = self.extend(self.arad,max(ids))
-        self.narad = self.extend(self.acolor,max(ids))
-    if which == "bond":
-      if max(ids) > self.nbrad:
-        self.nbrad = self.extend(self.brad,max(ids))
-        self.nbrad = self.extend(self.bcolor,max(ids))
-    if which == "line":
-      if max(ids) > self.nlrad:
-        self.nlrad = self.extend(self.lrad,max(ids))
-        self.nlrad = self.extend(self.lcolor,max(ids))
+            color = [red / 255.0, green / 255.0, blue / 255.0]
 
-    # set radius for each type
-    # if list lengths match, set directly, else interpolate
+            if which == "atom":
+                self.acolor[atid] = color
+            if which == "bond":
+                self.bcolor[atid] = color
+            if which == "tri":
+                self.tcolor[atid] = color
+            if which == "line":
+                self.lcolor[atid] = color
 
-    ntypes = len(ids)
-    nradii = len(radii)
+    # --------------------------------------------------------------------
+    # set radii for which = atoms, bonds, lines
 
-    for i in range(ntypes):
-      id = ids[i]
+    def setradii(self, which, ids, radii):
 
-      if ntypes == nradii: rad = radii[i]
-      else:
-        r = i/float(ntypes-1) * float(nradii-1)
-        jlo = int(r)
-        jhi = jlo + 1
-        if jhi == nradii: jhi = nradii - 1
-        rlo = radii[jlo]
-        rhi = radii[jhi]
-        delta = r - jlo
-        rad = rlo + delta*(rhi-rlo)
+        # convert args into lists if single values
+        # if arg = 0, convert to full-range list
 
-      if which == "atom": self.arad[id] = rad
-      if which == "bond": self.brad[id] = rad
-      if which == "line": self.lrad[id] = rad
-    
-  # --------------------------------------------------------------------
-  # set triangle fill style
-  # 0 = fill only, 1 = line only, 2 = fill and line
-  
-  def setfills(self,which,ids,fills):
+        if isinstance(ids, int) and ids == 0:
+            if which == "atom":
+                ids = list(range(self.narad))
+            if which == "bond":
+                ids = list(range(self.nbrad))
+            if which == "line":
+                ids = list(range(self.nlrad))
+        if not isinstance(ids, list) and not isinstance(ids, tuple):
+            ids = [ids]
+        if not isinstance(radii, list) and not isinstance(radii, tuple):
+            radii = [radii]
 
-    # convert args into lists if single values
-    # if arg = 0, convert to full-range list
-    
-    if type(ids) is types.IntType and ids == 0:
-      ids = range(self.ntfill)
-    if type(ids) is not types.ListType and type(ids) is not types.TupleType:
-      ids = [ids]
-    if type(fills) is not types.ListType and \
-           type(fills) is not types.TupleType:
-      fills = [fills]
+        # if list of types has a 0, increment each type value
 
-    # if list of types has a 0, increment each type value
+        if 0 in ids:
+            for i in range(len(ids)):
+                ids[i] += 1
 
-    if 0 in ids:
-      for i in xrange(len(ids)): ids[i] += 1
+        # extend storage list if necessary
+        # extend other arrays for same "which" so that gl::make_atom_calllist
+        #   has valid arrays to work with
 
-    # extend storage list if necessary
-    # extend other arrays for same "which" so that gl::make_atom_calllist
-    #   has valid arrays to work with
+        if which == "atom":
+            if max(ids) > self.narad:
+                self.narad = self.extend(self.arad, max(ids))
+                self.narad = self.extend(self.acolor, max(ids))
+        if which == "bond":
+            if max(ids) > self.nbrad:
+                self.nbrad = self.extend(self.brad, max(ids))
+                self.nbrad = self.extend(self.bcolor, max(ids))
+        if which == "line":
+            if max(ids) > self.nlrad:
+                self.nlrad = self.extend(self.lrad, max(ids))
+                self.nlrad = self.extend(self.lcolor, max(ids))
 
-    if max(ids) > self.ntfill:
-      self.ntfill = self.extend(self.tfill,max(ids))
-      self.ntfill = self.extend(self.tcolor,max(ids))
+        # set radius for each type
+        # if list lengths match, set directly, else interpolate
 
-    # set fill flag for each type
-    # if list lengths match, set directly, else set types to 1st fill value
+        ntypes = len(ids)
+        nradii = len(radii)
 
-    if len(fills) == len(ids):
-      for i in xrange(len(ids)): self.tfill[ids[i]] = int(fills[i])
-    else:
-      for id in ids: self.tfill[id] = int(fills[0])
-    
-  # --------------------------------------------------------------------
+        for i in range(ntypes):
+            atid = ids[i]
 
-  def extend(self,array,n):
-    for i in range(n-len(array)+1): array.append(0)
-    return n
+            if ntypes == nradii:
+                rad = radii[i]
+            else:
+                r = i / float(ntypes - 1) * float(nradii - 1)
+                jlo = int(r)
+                jhi = jlo + 1
+                if jhi == nradii:
+                    jhi = nradii - 1
+                rlo = radii[jlo]
+                rhi = radii[jhi]
+                delta = r - jlo
+                rad = rlo + delta * (rhi - rlo)
+
+            if which == "atom":
+                self.arad[atid] = rad
+            if which == "bond":
+                self.brad[atid] = rad
+            if which == "line":
+                self.lrad[atid] = rad
+
+    # --------------------------------------------------------------------
+    # set triangle fill style
+    # 0 = fill only, 1 = line only, 2 = fill and line
+
+    def setfills(self, which, ids, fills):
+
+        # convert args into lists if single values
+        # if arg = 0, convert to full-range list
+
+        if isinstance(ids, int) and ids == 0:
+            ids = list(range(self.ntfill))
+        if not isinstance(ids, list) and not isinstance(ids, tuple):
+            ids = [ids]
+        if not isinstance(fills, list) and not isinstance(fills, tuple):
+            fills = [fills]
+
+        # if list of types has a 0, increment each type value
+
+        if 0 in ids:
+            for i in range(len(ids)):
+                ids[i] += 1
+
+        # extend storage list if necessary
+        # extend other arrays for same "which" so that gl::make_atom_calllist
+        #   has valid arrays to work with
+
+        if max(ids) > self.ntfill:
+            self.ntfill = self.extend(self.tfill, max(ids))
+            self.ntfill = self.extend(self.tcolor, max(ids))
+
+        # set fill flag for each type
+        # if list lengths match, set directly, else set types to 1st fill value
+
+        if len(fills) == len(ids):
+            for i in range(len(ids)):
+                self.tfill[ids[i]] = int(fills[i])
+        else:
+            for atid in ids:
+                self.tfill[atid] = int(fills[0])
+
+    # --------------------------------------------------------------------
+
+    def extend(self, array, n):
+        for i in range(n - len(array) + 1):
+            array.append(0)
+        return n
+
 
 # --------------------------------------------------------------------
 # dictionary of 140 color names and associated RGB values
@@ -389,3 +414,4 @@ colors["white"] = [255, 255, 255]
 colors["whitesmoke"] = [245, 245, 245]
 colors["yellow"] = [255, 255, 0]
 colors["yellowgreen"] = [154, 205, 50]
+clist = itertools.cycle(colors.keys())
