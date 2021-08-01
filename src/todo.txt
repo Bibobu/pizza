@@ -14,14 +14,14 @@ image.py        TODO/Done?
 ldump.py        TODO/Done?
 log.py          TODO/Done?
 matlab.py       TODO/to wipe?
-mdump.py        TODO
-olog.py         TODO
-pair.py         TODO
-patch.py        TODO
+mdump.py        TODO/Done?
+olog.py         TODO/Done?
+pair.py         TODO/Done?
+patch.py        TODO/Done?
 pdbfile.py      TODO
 pizza.py        TODO
-plotview.py     TODO
-rasmol.py       TODO
+plotview.py     TODO/Done?
+rasmol.py       TODO/Done?
 raster.py       TODO
 sdata.py        TODO
 svg.py          TODO
