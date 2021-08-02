@@ -5,18 +5,22 @@
 # DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
 # certain rights in this software.  This software is distributed under
 # the GNU General Public License.
-
+#
 # vmd tool
-
+#
 # Minimalistic VMD embedding for Pizza.py
 # (c) 2010 Axel Kohlmeyer <akohlmey@gmail.com>
 # This class will replace the VMD startup script,
 #   open a pipe to the executable,
 #   and feed it Tcl command lines one at a time
+#
+#
+#
+# History
+#   11/10, Axel Kohlmeyer (Temple U): original version
 
-oneline = "Control VMD from python"
-
-docstr = """
+"""
+Control VMD from python
 v = vmd()               start up VMD
 v.stop()                shut down VMD instance
 v.clear()               delete all visualizations
@@ -36,9 +40,6 @@ v.read(file)                   read Tcl script file (e.g. saved state)
 v.enter()                      enter interactive shell
 v.debug([True|False])          display generated VMD script commands?
 """
-
-# History
-#   11/10, Axel Kohlmeyer (Temple U): original version
 
 # Imports and external programs
 
