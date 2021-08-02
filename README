@@ -1,3 +1,48 @@
+# Important notes
+
+This repository is a fork of the original pizza.py software package distributed
+by Sandia National Laboratories and maintained (as far as I know) by S.Plimpton
+as explained below.
+
+The pizza.py tools were written 15 years ago in python2. With the drop of
+python 2 support, this makes the tools obsolete. As it is a shame that such
+work would be lost and that some of them are still of good use, I've converted
+the files to python3. As the Python ecosystem hugely developped in the last
+20 years, a number of tools are still obsolete like some of the plotting and
+visualization scripts in the repository. The end of support of some of the
+library from python 2 to python 3 (like togl) makes it hard to convert them.
+Due to lack of test case, I am also unsure of some of the ports that might be
+buggy.
+
+Still, I think these can be packaged and used in independent application. As
+LAMMPS still does not have any dedicated set of tools apart from those, I
+intend to use them as a basis. I know that some tools are "read/write it all"
+and can convert stuff from any MD software to another but that is something I
+am reluctent to consider before each software has a set of dedicated tools.
+
+This project is not endorsed or commited to the LAMMPS/Pizza repository
+maintained by SNL and Temple university. Use these files at your own risks.
+
+## Project goals
+
+* Any feedback is welcomed in order to look out for bugs and stuff.
+* Propose a packageable version of pizza, if accepted it would be cool
+  - The way the tools was written was clever but bad practice
+    (adding functions to interactive python by catching error process and
+    parsing/executing commands).
+  - It would be beneficial to have a proper package:
+    ```
+    import pizza as pz
+    from pizza import data
+    ...
+    ```
+* As mentioned, many feature such as graphic interface use etc are hard to port
+  However, using a pizza package to treat data in another program dedicated
+  to plotting could make use of new opengl features developed over the years
+  easier. More on that in yet another project.
+
+# Former Readme, description and license.
+
 This is the Pizza.py (1 Oct 2006) software package.
 
 Copyright (2005) Sandia Corporation.  Under the terms of Contract
@@ -27,15 +72,15 @@ the code and its uses.
 The Pizza.py (1 Oct 2006) distribution includes the following files
 and directories:
 
-README			   this file
-LICENSE			   the GNU open-source license
-doc			   HTML documentation for Pizza.py
-examples		   scripts and data sets that exercise Pizza.py tools
-scripts			   various Pizza.py script files
-src			   source code for Pizza.py and its tools
+README             this file
+LICENSE            the GNU open-source license
+doc                HTML documentation for Pizza.py
+examples           scripts and data sets that exercise Pizza.py tools
+scripts            various Pizza.py script files
+src                source code for Pizza.py and its tools
 
 Point your browser at any of these files to get started:
 
-doc/Manual.html	           the Pizza.py manual
-doc/Section_intro.html	   hi-level introduction to Pizza.py
+doc/Manual.html            the Pizza.py manual
+doc/Section_intro.html     hi-level introduction to Pizza.py
 doc/Section_install.html   how to install Pizza.py

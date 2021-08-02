@@ -53,7 +53,6 @@ e.single(N)          same args as one() prepended by N, but write a single snap
 # Imports and external programs
 
 import sys
-import types
 
 # Class definition
 
@@ -66,13 +65,13 @@ class ensight:
         self.change = 0
         self.maxtype = 0
         self.data = data
-        if type(data) is types.InstanceType and ".dump" in str(data.__class__):
+        if ".dump" in str(data.__class__):
             self.which = 0
-        elif type(data) is types.InstanceType and ".data" in str(data.__class__):
+        elif ".data" in str(data.__class__):
             self.which = 0
-        elif type(data) is types.InstanceType and ".mdump" in str(data.__class__):
+        elif ".mdump" in str(data.__class__):
             self.which = 1
-        elif type(data) is types.InstanceType and ".cdata" in str(data.__class__):
+        elif ".cdata" in str(data.__class__):
             self.which = 1
         else:
             sys.exit("unrecognized object passed to ensight")
@@ -271,7 +270,8 @@ class ensight:
 
         # loop over snapshots
         # generate unique filenames
-        # write coords into one xyz file per snapshot, variables into their files
+        # write coords into one xyz file per snapshot
+        # variables into their files
 
         first = 1
         n = flag = etype = 0
