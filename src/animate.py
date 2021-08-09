@@ -67,9 +67,9 @@ class animate:
 
         # convert filestr into full list of files
 
-        list = str.split(filestr)
+        files = str.split(filestr)
         self.files = []
-        for file in list:
+        for file in files:
             self.files += glob.glob(file)
         self.nframes = len(self.files)
         if self.nframes == 0:
@@ -79,21 +79,19 @@ class animate:
 
         # load all images
 
+        tkroot = Tk()
+        self.tkroot = tkroot
+
+        win1 = Toplevel(tkroot)
+        win1.title("Pizza.py animate tool")
+
         self.images = []
         for i in range(self.nframes):
             self.images.append(PhotoImage(file=self.files[i]))
 
         # grab Tk instance from main
 
-        # from __main__ import tkroot
-
-        tkroot = Tk()
-        self.tkroot = tkroot
-
         # GUI control window
-
-        win1 = Toplevel(tkroot)
-        win1.title("Pizza.py animate tool")
 
         holder1 = Frame(win1)
         button1 = Button(holder1, text="<<", command=self.first).pack(side=LEFT)
@@ -137,12 +135,16 @@ class animate:
         win2 = Toplevel(tkroot)
         self.image_pane = Label(win2, image=self.images[0])
         self.image_pane.pack(side=BOTTOM)
-        tkroot.update_idletasks()  # force window to appear
+        self.tkroot.update_idletasks()  # force window to appear
 
         # display 1st image
 
         self.index = 0
         self.display(self.index)
+
+        # More comfortable to have a small delay IMO
+        self.delay(0.1)
+        self.tkroot.mainloop()
 
     # --------------------------------------------------------------------
 

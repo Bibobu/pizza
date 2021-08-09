@@ -86,9 +86,9 @@ class image:
 
         if filestr == "":
             filestr = " ".join(extensions)
-        list = str.split(filestr)
+        filelist = filestr.split()
         files = []
-        for file in list:
+        for file in filelist:
             files += glob.glob(file)
         if len(files) == 0:
             sys.exit("no image files to load")
@@ -152,76 +152,99 @@ class image:
         if len(files) % ncolumns != 0:
             rowframe.pack(side=tk.TOP)
         scroll.pack(side=tk.LEFT)
+        tkroot.mainloop()
 
     # --------------------------------------------------------------------
     # wrapper on ImageMagick convert command
 
     def convert(self, file1, file2, switch=""):
-        if file1.find("*") < 0 or file2.find("*") < 0:
-            cmd = "%s %s %s %s" % (PIZZA_CONVERT, switch, file1, file2)
-            subprocess.check_output(cmd)
-            return
+        output = """
+        The convert method used to be an imagemagick wrapper to convert
+        images from pizza command line. If imagemagick is installed, it is
+        better to use the convert command directly form the shell:
+        convert image1.tif image1.png
+        see `man convert` for more details.
+        """
+        print(output)
+        # if file1.find("*") < 0 or file2.find("*") < 0:
+        #     # cmd = "%s %s %s %s" % (PIZZA_CONVERT, switch, file1, file2)
+        #     # subprocess.check_output(cmd)
+        #     subprocess.run([PIZZA_CONVERT, switch, file1, file2])
+        #     return
 
-        index = file1.index("*")
-        pre1 = file1[:index]
-        post1 = file1[index + 1:]
-        index = file2.index("*")
-        pre2 = file2[:index]
-        post2 = file2[index + 1:]
-        expr = "%s(.*)%s" % (pre1, post1)
+        # index = file1.index("*")
+        # pre1 = file1[:index]
+        # post1 = file1[index + 1:]
+        # index = file2.index("*")
+        # pre2 = file2[:index]
+        # post2 = file2[index + 1:]
+        # expr = "%s(.*)%s" % (pre1, post1)
 
-        filelist = glob.glob(file1)
-        for file1 in filelist:
-            middle = re.search(expr, file1).group(1)
-            file2 = "%s%s%s" % (pre2, middle, post2)
-            cmd = "%s %s %s %s" % (PIZZA_CONVERT, switch, file1, file2)
-            print(middle)
-            sys.stdout.flush()
-            subprocess.check_output(cmd)
-        print()
+        # filelist = glob.glob(file1)
+        # for file1 in filelist:
+        #     middle = re.search(expr, file1).group(1)
+        #     file2 = "%s%s%s" % (pre2, middle, post2)
+        #     # cmd = "%s %s %s %s" % (PIZZA_CONVERT, switch, file1, file2)
+        #     print(middle)
+        #     sys.stdout.flush()
+        #     # subprocess.check_output(cmd)
+        #     subprocess.run([PIZZA_CONVERT, switch, file1, file2])
+        # print()
 
     # --------------------------------------------------------------------
     # wrapper on ImageMagick montage command
 
     def montage(self, switch, *fileargs):
-        nsets = len(fileargs)
-        if nsets < 2:
-            sys.exit("montage requires 2 or more file args")
+        output = """
+        The montage method used to be an imagemagick wrapper to tile
+        images from pizza command line. If imagemagick is installed, it is
+        better to use the montage command directly from the shell:
+        montage image1.png image2.png -tile 2x1 -geometry +0+0 out.png
+        see `man montage` for more details.
+        """
+        print(output)
+        # nsets = len(fileargs)
+        # if nsets < 2:
+        #     sys.exit("montage requires 2 or more file args")
 
-        for i in range(nsets):
-            if fileargs[i].find("*") < 0:
-                cmd = "%s %s" % (PIZZA_MONTAGE, switch)
-                for j in range(nsets):
-                    cmd += " %s" % fileargs[j]
-                subprocess.check_output(cmd)
-                return
+        # for i in range(nsets):
+        #     if fileargs[i].find("*") < 0:
+        #         cmd = "%s %s" % (PIZZA_MONTAGE, switch)
+        #         cmd = [PIZZA_MONTAGE, switch]
+        #         for j in range(nsets):
+        #             cmd += "%s" % fileargs[j]
+        #         # subprocess.check_output(cmd)
+        #         subprocess.run(cmd)
+        #         return
 
-        nfiles = len(glob.glob(fileargs[0]))
-        filesets = []
-        for i in range(nsets - 1):
-            filesets.append(glob.glob(fileargs[i]))
-            if len(filesets[-1]) != nfiles:
-                sys.exit("each montage arg must represent equal # of files")
+        # nfiles = len(glob.glob(fileargs[0]))
+        # filesets = []
+        # for i in range(nsets - 1):
+        #     filesets.append(glob.glob(fileargs[i]))
+        #     if len(filesets[-1]) != nfiles:
+        #         sys.exit("each montage arg must represent equal # of files")
 
-        index = fileargs[0].index("*")
-        pre1 = fileargs[0][:index]
-        post1 = fileargs[0][index + 1:]
-        index = fileargs[-1].index("*")
-        preN = fileargs[-1][:index]
-        postN = fileargs[-1][index + 1:]
-        expr = "%s(.*)%s" % (pre1, post1)
+        # index = fileargs[0].index("*")
+        # pre1 = fileargs[0][:index]
+        # post1 = fileargs[0][index + 1:]
+        # index = fileargs[-1].index("*")
+        # preN = fileargs[-1][:index]
+        # postN = fileargs[-1][index + 1:]
+        # expr = "%s(.*)%s" % (pre1, post1)
 
-        for i in range(nfiles):
-            cmd = "%s %s" % (PIZZA_MONTAGE, switch)
-            for j in range(nsets - 1):
-                cmd += " %s" % filesets[j][i]
-            middle = re.search(expr, filesets[0][i]).group(1)
-            fileN = "%s%s%s" % (preN, middle, postN)
-            cmd += " %s" % fileN
-            subprocess.check_output(cmd)
-            print(middle)
-            sys.stdout.flush()
-        print()
+        # for i in range(nfiles):
+        #     cmd = "%s %s" % (PIZZA_MONTAGE, switch)
+        #     cmd = [PIZZA_MONTAGE, switch]
+        #     for j in range(nsets - 1):
+        #         cmd += "%s" % filesets[j][i]
+        #     middle = re.search(expr, filesets[0][i]).group(1)
+        #     fileN = "%s%s%s" % (preN, middle, postN)
+        #     cmd += "%s" % fileN
+        #     # subprocess.check_output(cmd)
+        #     subprocess.run(cmd)
+        #     print(middle)
+        #     sys.stdout.flush()
+        # print()
 
 
 # --------------------------------------------------------------------

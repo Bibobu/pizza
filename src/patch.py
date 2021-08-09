@@ -27,9 +27,9 @@ Create patchy or rigid particles for LAMMPS input
 p = patch(vfrac)           setup box with a specified volume fraction
 p = patch(vfrac,1,1,2)     x,y,z = aspect ratio of box (def = 1,1,1)
 
-p.seed = 48379		   set random # seed (def = 12345)
-p.randomized = 0	   1 = choose next mol randomly (def), 0 = as generated
-p.dim = 2		   set dimension of created box (def = 3)
+p.seed = 48379         set random # seed (def = 12345)
+p.randomized = 0       1 = choose next mol randomly (def), 0 = as generated
+p.dim = 2              set dimension of created box (def = 3)
 p.blen = 0.97              set length of tether bonds (def = 0.97)
 p.dmin = 1.02              set min r from i-1 to i+1 tether site (def = 1.02)
 p.lattice = [Nx,Ny,Nz]     generate Nx by Ny by Nz lattice of particles
@@ -87,6 +87,7 @@ p.write("data.patch")      write out system to LAMMPS data file
 import sys
 from math import pi, sqrt, cos, sin
 from data import data
+import numpy as np
 
 # Class definition
 
@@ -121,9 +122,11 @@ class patch:
     # reset self.style for lines and triangles
 
     def build(self, n, style, *types):
-        cmd = "atoms,bonds,tris,segments,bodies,volume = self.%s(*types)" % style
+        # cmd = "atoms,bonds,tris,segments,bodies,volume = self.%s(*types)" % style
+        cmd = "self.%s(*types)" % style
         for i in range(n):
-            exec(cmd)
+            # exec(cmd)
+            atoms, bonds, tris, segments, bodies, volume = eval(cmd)
             self.molecules.append([atoms, bonds, tris, segments, bodies])
             self.volume += volume
 
@@ -174,7 +177,7 @@ class patch:
 
         while self.molecules:
             if self.randomized:
-                i = int(self.random() * len(self.molecules))
+                i = int(np.random.uniform() * len(self.molecules))
             else:
                 i = 0
             molecule = self.molecules.pop(i)
@@ -187,15 +190,15 @@ class patch:
             # yp is random dir crossed into xp
             # zp is xp crossed into yp
 
-            xp[0] = self.random() - 0.5
-            xp[1] = self.random() - 0.5
-            xp[2] = self.random() - 0.5
+            xp[0] = np.random.uniform() - 0.5
+            xp[1] = np.random.uniform() - 0.5
+            xp[2] = np.random.uniform() - 0.5
             r = sqrt(xp[0] * xp[0] + xp[1] * xp[1] + xp[2] * xp[2])
             xp[0], xp[1], xp[2] = xp[0] / r, xp[1] / r, xp[2] / r
 
-            r0 = self.random() - 0.5
-            r1 = self.random() - 0.5
-            r2 = self.random() - 0.5
+            r0 = np.random.uniform() - 0.5
+            r1 = np.random.uniform() - 0.5
+            r2 = np.random.uniform() - 0.5
             yp[0] = r1 * xp[2] - r2 * xp[1]
             yp[1] = r2 * xp[0] - r0 * xp[2]
             yp[2] = r0 * xp[1] - r1 * xp[0]
@@ -215,9 +218,9 @@ class patch:
             # random origin or lattice site for new particle
 
             if latflag == 0:
-                xorig = self.xlo + self.random() * self.xprd
-                yorig = self.ylo + self.random() * self.yprd
-                zorig = self.zlo + self.random() * self.zprd
+                xorig = self.xlo + np.random.uniform() * self.xprd
+                yorig = self.ylo + np.random.uniform() * self.yprd
+                zorig = self.zlo + np.random.uniform() * self.zprd
             else:
                 ix = (idmol - 1) % self.lattice[0]
                 iy = (idmol - 1) / self.lattice[0] % self.lattice[1]
@@ -257,9 +260,9 @@ class patch:
                     x = xorig + xnew * xp[0] + ynew * yp[0] + znew * zp[0]
                     y = yorig + xnew * xp[1] + ynew * yp[1] + znew * zp[1]
                     z = zorig + xnew * xp[2] + ynew * yp[2] + znew * zp[2]
-                    x += (self.random() - 0.5) * 2 * self.displace[0]
-                    y += (self.random() - 0.5) * 2 * self.displace[1]
-                    z += (self.random() - 0.5) * 2 * self.displace[2]
+                    x += (np.random.uniform() - 0.5) * 2 * self.displace[0]
+                    y += (np.random.uniform() - 0.5) * 2 * self.displace[1]
+                    z += (np.random.uniform() - 0.5) * 2 * self.displace[2]
                     ix = iy = iz = 0
                     x, y, z, ix, iy, iz = self.pbc(x, y, z, ix, iy, iz)
                     atoms.append([idatom, idmol, atom[0], x, y, z, ix, iy, iz])
@@ -275,9 +278,9 @@ class patch:
                     x = xorig + xnew * xp[0] + ynew * yp[0] + znew * zp[0]
                     y = yorig + xnew * xp[1] + ynew * yp[1] + znew * zp[1]
                     z = zorig + xnew * xp[2] + ynew * yp[2] + znew * zp[2]
-                    x += (self.random() - 0.5) * 2 * self.displace[0]
-                    y += (self.random() - 0.5) * 2 * self.displace[1]
-                    z += (self.random() - 0.5) * 2 * self.displace[2]
+                    x += (np.random.uniform() - 0.5) * 2 * self.displace[0]
+                    y += (np.random.uniform() - 0.5) * 2 * self.displace[1]
+                    z += (np.random.uniform() - 0.5) * 2 * self.displace[2]
                     ix = iy = iz = 0
                     x, y, z, ix, iy, iz = self.pbc(x, y, z, ix, iy, iz)
                     atoms.append([idatom,
@@ -379,7 +382,7 @@ class patch:
         records = []
         if self.style == "molecular":
             for atom in atoms:
-                one = "%d %d %d %g %g %g %d %d %d\n" % (
+                one = "%d %d %d %g %g %g %d %d %d" % (
                     atom[0],
                     atom[1],
                     atom[2],
@@ -393,7 +396,7 @@ class patch:
                 records.append(one)
         elif self.style == "sphere":
             for atom in atoms:
-                one = "%d %d %g %g %g %g %g %d %d %d\n" % (
+                one = "%d %d %g %g %g %g %g %d %d %d" % (
                     atom[0],
                     atom[1],
                     atom[2],
@@ -408,7 +411,7 @@ class patch:
                 records.append(one)
         elif self.style == "tri":
             for atom in atoms:
-                one = "%d %d %d %d %g %g %g %g %d %d %d\n" % (
+                one = "%d %d %d %d %g %g %g %g %d %d %d" % (
                     atom[0],
                     atom[1],
                     atom[2],
@@ -429,7 +432,7 @@ class patch:
         if bonds:
             lines = []
             for bond in bonds:
-                line = "%d %d %d %d\n" % (bond[0], bond[1], bond[2], bond[3])
+                line = "%d %d %d %d" % (bond[0], bond[1], bond[2], bond[3])
                 lines.append(line)
             d.sections["Bonds"] = lines
 
@@ -438,7 +441,7 @@ class patch:
         if tris:
             records = []
             for tri in tris:
-                one = "%d %g %g %g %g %g %g %g %g %g\n" % (
+                one = "%d %g %g %g %g %g %g %g %g %g" % (
                     tri[0],
                     tri[1],
                     tri[2],
@@ -458,7 +461,7 @@ class patch:
         if self.extra == "Molecules":
             records = []
             for mol in mols:
-                one = "%d %d\n" % (mol[0], mol[1])
+                one = "%d %d" % (mol[0], mol[1])
                 records.append(one)
             d.sections["Molecules"] = records
 
@@ -499,7 +502,7 @@ class patch:
 
         while self.molecules:
             if self.randomized:
-                i = int(self.random() * len(self.molecules))
+                i = int(np.random.uniform() * len(self.molecules))
             else:
                 i = 0
             molecule = self.molecules.pop(i)
@@ -512,8 +515,8 @@ class patch:
             # xp is in random direction
             # yp is (0,0,1) crossed into xp
 
-            xp[0] = self.random() - 0.5
-            xp[1] = self.random() - 0.5
+            xp[0] = np.random.uniform() - 0.5
+            xp[1] = np.random.uniform() - 0.5
             r = sqrt(xp[0] * xp[0] + xp[1] * xp[1])
             xp[0], xp[1] = xp[0] / r, xp[1] / r
 
@@ -525,8 +528,8 @@ class patch:
             # random origin or lattice site for new particle
 
             if latflag == 0:
-                xorig = self.xlo + self.random() * self.xprd
-                yorig = self.ylo + self.random() * self.yprd
+                xorig = self.xlo + np.random.uniform() * self.xprd
+                yorig = self.ylo + np.random.uniform() * self.yprd
                 zorig = 0.0
             else:
                 ix = (idmol - 1) % self.lattice[0]
@@ -563,8 +566,8 @@ class patch:
                     x = xorig + xnew * xp[0] + ynew * yp[0]
                     y = yorig + xnew * xp[1] + ynew * yp[1]
                     z = atom[3]
-                    x += (self.random() - 0.5) * 2 * self.displace[0]
-                    y += (self.random() - 0.5) * 2 * self.displace[1]
+                    x += (np.random.uniform() - 0.5) * 2 * self.displace[0]
+                    y += (np.random.uniform() - 0.5) * 2 * self.displace[1]
                     ix = iy = iz = 0
                     x, y, z, ix, iy, iz = self.pbc(x, y, z, ix, iy, iz)
                     atoms.append([idatom, idmol, atom[0], x, y, z, ix, iy, iz])
@@ -579,8 +582,8 @@ class patch:
                     x = xorig + xnew * xp[0] + ynew * yp[0]
                     y = yorig + xnew * xp[1] + ynew * yp[1]
                     z = atom[3]
-                    x += (self.random() - 0.5) * 2 * self.displace[0]
-                    y += (self.random() - 0.5) * 2 * self.displace[1]
+                    x += (np.random.uniform() - 0.5) * 2 * self.displace[0]
+                    y += (np.random.uniform() - 0.5) * 2 * self.displace[1]
                     ix = iy = iz = 0
                     x, y, z, ix, iy, iz = self.pbc(x, y, z, ix, iy, iz)
                     atoms.append([idatom,
@@ -716,7 +719,7 @@ class patch:
         records = []
         if self.style == "molecular":
             for atom in atoms:
-                one = "%d %d %d %g %g %g %d %d %d\n" % (
+                one = "%d %d %d %g %g %g %d %d %d" % (
                     atom[0],
                     atom[1],
                     atom[2],
@@ -730,7 +733,7 @@ class patch:
                 records.append(one)
         elif self.style == "sphere":
             for atom in atoms:
-                one = "%d %d %g %g %g %g %g %d %d %d\n" % (
+                one = "%d %d %g %g %g %g %g %d %d %d" % (
                     atom[0],
                     atom[1],
                     atom[2],
@@ -745,7 +748,7 @@ class patch:
                 records.append(one)
         elif self.style == "line":
             for atom in atoms:
-                one = "%d %d %d %d %g %g %g %g %d %d %d\n" % (
+                one = "%d %d %d %d %g %g %g %g %d %d %d" % (
                     atom[0],
                     atom[1],
                     atom[2],
@@ -761,7 +764,7 @@ class patch:
                 records.append(one)
         elif self.style == "body":
             for atom in atoms:
-                one = "%d %d %d %d %g %g %g %g %d %d\n" % (
+                one = "%d %d %d %d %g %g %g %g %d %d" % (
                     atom[0],
                     atom[1],
                     atom[2],
@@ -781,7 +784,7 @@ class patch:
         if bonds:
             records = []
             for bond in bonds:
-                one = "%d %d %d %d\n" % (bond[0], bond[1], bond[2], bond[3])
+                one = "%d %d %d %d" % (bond[0], bond[1], bond[2], bond[3])
                 records.append(one)
             d.sections["Bonds"] = records
 
@@ -790,7 +793,7 @@ class patch:
         if lines:
             records = []
             for line in lines:
-                one = "%d %g %g %g %g\n" % (
+                one = "%d %g %g %g %g" % (
                         line[0], line[1], line[2], line[3], line[4]
                         )
                 records.append(one)
@@ -804,7 +807,7 @@ class patch:
             for body in bodies:
                 ivalues = body[1]
                 dvalues = body[2]
-                one = "%d %d %d\n" % (body[0], len(ivalues), len(dvalues))
+                one = "%d %d %d" % (body[0], len(ivalues), len(dvalues))
                 records.append(one)
                 i = 0
                 while i < len(ivalues):
@@ -812,7 +815,7 @@ class patch:
                     one = ""
                     for value in values_list:
                         one += "%g " % int(value)
-                    one += "\n"
+                    one += ""
                     records.append(one)
                     i += len(values_list)
                 i = 0
@@ -821,7 +824,7 @@ class patch:
                     one = ""
                     for value in values_list:
                         one += "%g " % float(value)
-                    one += "\n"
+                    one += ""
                     records.append(one)
                     i += len(values_list)
             d.sections["Bodies"] = records
@@ -831,7 +834,7 @@ class patch:
         if self.extra == "Molecules":
             records = []
             for mol in mols:
-                one = "%d %d\n" % (mol[0], mol[1])
+                one = "%d %d" % (mol[0], mol[1])
                 records.append(one)
             d.sections["Molecules"] = records
 
@@ -1028,7 +1031,7 @@ class patch:
                 self.dmin,
                 [ntype, 0.5 * diam - 0.5, 0.0, 0.0],
                 atoms[1],
-                self.random,
+                np.random.uniform,
             )
         if m2:
             atoms.append([m2type, -0.5 * diam - 0.5, 0.0, 0.0])
@@ -1039,7 +1042,7 @@ class patch:
                 self.dmin,
                 [ntype, -0.5 * diam + 0.5, 0.0, 0.0],
                 atoms[1 + m1],
-                self.random,
+                np.random.uniform,
             )
 
         bonds = []
@@ -1114,7 +1117,7 @@ class patch:
                 self.dmin,
                 atoms[n - 2],
                 atoms[n - 1],
-                self.random,
+                np.random.uniform,
             )
         if m2:
             atoms += tether(
@@ -1124,7 +1127,7 @@ class patch:
                 self.dmin,
                 atoms[1],
                 atoms[0],
-                self.random
+                np.random.uniform
             )
 
         bonds = []
@@ -1177,7 +1180,7 @@ class patch:
                 self.dmin,
                 atoms[1],
                 atoms[0],
-                self.random
+                np.random.uniform
             )
         if m2:
             atoms += tether(
@@ -1187,7 +1190,7 @@ class patch:
                 self.dmin,
                 atoms[nsize - 2],
                 atoms[nsize - 1],
-                self.random,
+                np.random.uniform,
             )
         if m3:
             atoms += tether(
@@ -1197,7 +1200,7 @@ class patch:
                 self.dmin,
                 atoms[n - 2],
                 atoms[n - 1],
-                self.random,
+                np.random.uniform,
             )
 
         bonds = []
@@ -1291,7 +1294,7 @@ class patch:
                 self.dmin,
                 atoms[0],
                 atoms[1],
-                self.random
+                np.random.uniform
             )
         if m2:
             atoms += tether(
@@ -1301,7 +1304,7 @@ class patch:
                 self.dmin,
                 atoms[0],
                 atoms[2],
-                self.random
+                np.random.uniform
             )
         if m3:
             atoms += tether(
@@ -1311,7 +1314,7 @@ class patch:
                 self.dmin,
                 atoms[0],
                 atoms[3],
-                self.random
+                np.random.uniform
             )
         if m4:
             atoms += tether(
@@ -1321,7 +1324,7 @@ class patch:
                 self.dmin,
                 atoms[0],
                 atoms[4],
-                self.random
+                np.random.uniform
             )
         if m5:
             atoms += tether(
@@ -1331,7 +1334,7 @@ class patch:
                 self.dmin,
                 atoms[0],
                 atoms[5],
-                self.random
+                np.random.uniform
             )
         if m6:
             atoms += tether(
@@ -1341,7 +1344,7 @@ class patch:
                 self.dmin,
                 atoms[0],
                 atoms[6],
-                self.random
+                np.random.uniform
             )
 
         bonds = []
@@ -1480,7 +1483,7 @@ class patch:
         nhi = int(params[1])
         pgtype = params[2]
 
-        n = int(nlo + self.random() * (nhi + 1 - nlo))
+        n = int(nlo + np.random.uniform() * (nhi + 1 - nlo))
 
         # N sub-particles around perimeter of polygon in xy plane
         # rad set so that successive sub-particles are distance 1.0 apart
@@ -1520,7 +1523,7 @@ class patch:
         nhi = int(params[1])
         stype = params[2]
 
-        n = int(nlo + self.random() * (nhi + 1 - nlo))
+        n = int(nlo + np.random.uniform() * (nhi + 1 - nlo))
 
         # N sub-particles around edges of cube faces
         # rad set so that cube corners are on surface of sphere
@@ -1635,9 +1638,9 @@ class patch:
         chi = params[5]
         tritype = params[6]
 
-        a = alo + self.random() * (ahi - alo)
-        b = blo + self.random() * (bhi - blo)
-        c = clo + self.random() * (chi - clo)
+        a = alo + np.random.uniform() * (ahi - alo)
+        b = blo + np.random.uniform() * (bhi - blo)
+        c = clo + np.random.uniform() * (chi - clo)
 
         atoms = []
         tris = []
@@ -1784,8 +1787,8 @@ class patch:
         bhi = float(params[3])
         litype = params[4]
 
-        a = alo + self.random() * (ahi - alo)
-        b = blo + self.random() * (bhi - blo)
+        a = alo + np.random.uniform() * (ahi - alo)
+        b = blo + np.random.uniform() * (bhi - blo)
 
         atoms = []
         segments = []
@@ -1821,8 +1824,8 @@ class patch:
         bhi = float(params[3])
         litype = params[4]
 
-        base = alo + self.random() * (ahi - alo)
-        ht = blo + self.random() * (bhi - blo)
+        base = alo + np.random.uniform() * (ahi - alo)
+        ht = blo + np.random.uniform() * (bhi - blo)
 
         atoms = []
         segments = []
@@ -1853,7 +1856,7 @@ class patch:
         nhi = int(params[1])
         botype = params[2]
 
-        n = int(nlo + self.random() * (nhi + 1 - nlo))
+        n = int(nlo + np.random.uniform() * (nhi + 1 - nlo))
 
         atoms = []
         bodies = []

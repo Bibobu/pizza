@@ -1,6 +1,8 @@
 # simple test of animate tool
 # requires files/bucky*png files
 
+import animate
+
 a = animate("files/bucky*gif")
 a.play()
 a.delay(0.1)
@@ -11,4 +13,4 @@ a.next()
 a.previous()
 a.frame(1)
 
-print "all done ... type CTRL-D to exit Pizza.py"
+print("all done ... type CTRL-D to exit Pizza.py")

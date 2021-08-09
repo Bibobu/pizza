@@ -225,8 +225,11 @@ class dump:
         words = args[0].split()
         self.flist = []
         for word in words:
+            print(word)
             self.flist += glob.glob(word)
         if len(self.flist) == 0 and len(args) == 1:
+            print(self.flist)
+            print(args)
             sys.exit("no dump file specified")
 
         if len(args) == 1:

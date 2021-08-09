@@ -193,7 +193,8 @@ class mdump:
 
         # sort entries by timestep, cull and combine duplicates
 
-        self.snaps.sort(self.compare_time)
+        self.snaps = sorted(self.snaps, key=lambda x: x.time)
+        # self.snaps.sort(self.compare_time)
         self.cull()
 
         # sort all node, element, nvalue, evalue arrays by ID
@@ -879,12 +880,13 @@ class tselect:
     def test(self, teststr):
         data = self.data
         snaps = data.snaps
-        cmd = "flag = " + teststr.replace("$t", "snaps[i].time")
-        ccmd = compile(cmd, "", "single")
+        cmd = teststr.replace("$t", "snaps[i].time")
+        # ccmd = compile(cmd, "", "single")
         for i in range(data.nsnaps):
             if not snaps[i].tselect:
                 continue
-            exec(ccmd)
+            # exec(ccmd)
+            flag = eval(cmd)
             if not flag:
                 snaps[i].tselect = 0
                 data.nselect -= 1
@@ -932,8 +934,8 @@ class eselect:
             column = data.names[name]
             insert = "snap.atoms[i][%d]" % column
             teststr = teststr.replace(item, insert)
-        cmd = "flag = " + teststr
-        ccmd = compile(cmd, "", "single")
+        cmd = teststr
+        # ccmd = compile(cmd, "", "single")
 
         if len(args) == 0:  # all selected timesteps
             for snap in data.snaps:
@@ -942,7 +944,8 @@ class eselect:
                 for i in range(snap.nelements):
                     if not snap.eselect[i]:
                         continue
-                    exec(ccmd)
+                    # exec(ccmd)
+                    flag = eval(cmd)
                     if not flag:
                         snap.eselect[i] = 0
                         snap.nselect -= 1

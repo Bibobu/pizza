@@ -54,6 +54,7 @@ c.write("data.file")        write out all built chains to LAMMPS data file
 
 import math
 import sys
+import numpy as np
 from data import data
 
 # Class definition
@@ -74,6 +75,7 @@ class chain:
         self.seed = 12345
         self.mtype = 1
         self.btype = 1
+        self.charge = 0.
         self.blen = 0.97
         self.dmin = 1.02
         self.id = "chain"
@@ -92,7 +94,9 @@ class chain:
         self.zlo = -self.zprd / 2.0
         self.zhi = self.zprd / 2.0
 
-        print("Simulation box: %g by %g by %g" % (self.xprd, self.yprd, self.zprd))
+        print("Simulation box: %g by %g by %g" %
+              (self.xprd, self.yprd, self.zprd)
+              )
 
     # --------------------------------------------------------------------
 
@@ -101,38 +105,41 @@ class chain:
             atoms = []
             bonds = []
             id_atom_prev = id_mol_prev = id_bond_prev = 0
-            if len(self.atoms):
+            if self.atoms:
                 id_atom_prev = self.atoms[-1][0]
                 id_mol_prev = self.atoms[-1][1]
-            if len(self.bonds):
+            if self.bonds:
                 id_bond_prev = self.bonds[-1][0]
 
             for imonomer in range(nper):
                 if imonomer == 0:
-                    x = self.xlo + self.random() * self.xprd
-                    y = self.ylo + self.random() * self.yprd
-                    z = self.zlo + self.random() * self.zprd
+                    # x = self.xlo + self.random() * self.xprd
+                    # y = self.ylo + self.random() * self.yprd
+                    # z = self.zlo + self.random() * self.zprd
+                    x = np.random.uniform(self.xlo, self.xhi)
+                    y = np.random.uniform(self.xlo, self.xhi)
+                    z = np.random.uniform(self.xlo, self.xhi)
                     ix = iy = iz = 0
                 else:
                     restriction = True
                     while restriction:
                         rsq = 2.0
                         while rsq > 1.0:
-                            dx = 2.0 * self.random() - 1.0
-                            dy = 2.0 * self.random() - 1.0
-                            dz = 2.0 * self.random() - 1.0
+                            dx = np.random.uniform(-1, 1)
+                            dy = np.random.uniform(-1, 1)
+                            dz = np.random.uniform(-1, 1)
                             rsq = dx * dx + dy * dy + dz * dz
                         r = math.sqrt(rsq)
                         dx, dy, dz = dx / r, dy / r, dz / r
-                        x = atoms[-1][3] + dx * self.blen
-                        y = atoms[-1][4] + dy * self.blen
-                        z = atoms[-1][5] + dz * self.blen
+                        x = atoms[-1][3] + dx*self.blen
+                        y = atoms[-1][4] + dy*self.blen
+                        z = atoms[-1][5] + dz*self.blen
                         restriction = False
                         if imonomer >= 2:
                             dx = x - atoms[-2][3]
                             dy = y - atoms[-2][4]
                             dz = z - atoms[-2][5]
-                            if math.sqrt(dx * dx + dy * dy + dz * dz) <= self.dmin:
+                            if math.sqrt(dx*dx + dy*dy + dz*dz) <= self.dmin:
                                 restriction = True
 
                 x, y, z, ix, iy, iz = self.pbc(x, y, z, ix, iy, iz)
@@ -148,7 +155,11 @@ class chain:
                 else:
                     sys.exit("chain ID is not a valid value")
 
-                atoms.append([idatom, idmol, self.mtype, x, y, z, ix, iy, iz])
+                atcharge = self.charge
+                atoms.append(
+                        [idatom, idmol, self.mtype, atcharge,
+                         x, y, z, ix, iy, iz]
+                        )
                 if imonomer:
                     bondid = id_bond_prev + imonomer
                     bonds.append([bondid, self.btype, idatom - 1, idatom])
@@ -188,12 +199,12 @@ class chain:
 
         lines = []
         for i in range(atypes):
-            lines.append("%d 1.0\n" % (i + 1))
+            lines.append("%d 1.0" % (i + 1))
         d.sections["Masses"] = lines
 
         lines = []
         for atom in self.atoms:
-            line = "%d %d %d %g %g %g %d %d %d\n" % (
+            line = "{:>} {:>} {:>} {:>} {:>} {:>} {:>} {:>} {:>} {:>}".format(
                 atom[0],
                 atom[1],
                 atom[2],
@@ -203,13 +214,14 @@ class chain:
                 atom[6],
                 atom[7],
                 atom[8],
+                atom[9]
             )
             lines.append(line)
         d.sections["Atoms"] = lines
 
         lines = []
         for bond in self.bonds:
-            line = "%d %d %d %d\n" % (bond[0], bond[1], bond[2], bond[3])
+            line = "%d %d %d %d" % (bond[0], bond[1], bond[2], bond[3])
             lines.append(line)
         d.sections["Bonds"] = lines
 

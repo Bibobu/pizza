@@ -160,6 +160,7 @@ import sys
 import glob
 from os import popen
 from math import sqrt, pi, cos, sin, fabs
+import numpy as np
 from copy import deepcopy
 
 try:
@@ -547,35 +548,45 @@ class cdata:
 
         cmd1 = teststr.replace("$x", "o.vertices[v1][0]")
         cmd1 = cmd1.replace("$y", "o.vertices[v1][1]")
-        cmd1 = "flag1 = " + cmd1.replace("$z", "o.vertices[v1][2]")
-        ccmd1 = compile(cmd1, "", "single")
+        # cmd1 = "flag1 = " + cmd1.replace("$z", "o.vertices[v1][2]")
+        cmd1 = cmd1.replace("$z", "o.vertices[v1][2]")
+        # ccmd1 = compile(cmd1, "", "single")
 
         cmd2 = teststr.replace("$x", "o.vertices[v2][0]")
         cmd2 = cmd2.replace("$y", "o.vertices[v2][1]")
-        cmd2 = "flag2 = " + cmd2.replace("$z", "o.vertices[v2][2]")
-        ccmd2 = compile(cmd2, "", "single")
+        # cmd2 = "flag2 = " + cmd2.replace("$z", "o.vertices[v2][2]")
+        cmd2 = cmd2.replace("$z", "o.vertices[v2][2]")
+        # ccmd2 = compile(cmd2, "", "single")
 
         cmd3 = teststr.replace("$x", "o.vertices[v3][0]")
         cmd3 = cmd3.replace("$y", "o.vertices[v3][1]")
-        cmd3 = "flag3 = " + cmd3.replace("$z", "o.vertices[v3][2]")
-        ccmd3 = compile(cmd3, "", "single")
+        # cmd3 = "flag3 = " + cmd3.replace("$z", "o.vertices[v3][2]")
+        cmd3 = cmd3.replace("$z", "o.vertices[v3][2]")
+        # ccmd3 = compile(cmd3, "", "single")
+        print(cmd1)
+        print(cmd2)
+        print(cmd3)
 
         # loop over triangles in id_surf
-        # 3 vertices must satisfy all 3 tests for tri's inclusion in new surf obj
+        # 3 vertices must satisfy all 3 tests
+        # for tri's inclusion in new surf obj
 
         for tri in o.triangles:
             v1 = tri[0] - 1
             v2 = tri[1] - 1
             v3 = tri[2] - 1
-            exec(ccmd1)
-            exec(ccmd2)
-            exec(ccmd3)
+            # flag1 = o.vertices[v1][2] < 2.0
+            # flag2 = o.vertices[v2][2] < 2.0
+            # flag3 = o.vertices[v3][2] < 2.0
+            flag1 = eval(cmd1)
+            flag2 = eval(cmd2)
+            flag3 = eval(cmd3)
             # Flags defined in commands
             if flag1 and flag2 and flag3:
                 obj.vertices.append(o.vertices[v1][:])
                 obj.vertices.append(o.vertices[v2][:])
                 obj.vertices.append(o.vertices[v3][:])
-                obj.triangles.append([obj.nvert + 1, obj.nvert + 2, obj.nvert + 3])
+                obj.triangles.append([obj.nvert+1, obj.nvert+2, obj.nvert+3])
                 obj.nvert += 3
                 obj.ntri += 1
 
@@ -616,7 +627,8 @@ class cdata:
         if out_id:
             out_obj = self.objs[self.ids[out_id]]
 
-        # pre-process SURFACE objects to bin their triangles for faster searching
+        # pre-process SURFACE objects to bin
+        # their triangles for faster searching
 
         if in_obj.style == SURFACE:
             in_obj.inside_prep()
@@ -629,15 +641,23 @@ class cdata:
         xsize = xhi - xlo
         ysize = yhi - ylo
         zsize = zhi - zlo
+        print("bbox:")
+        print(xlo, xhi, xsize)
+        print(ylo, yhi, ysize)
+        print(zlo, zhi, zsize)
 
         # generate particles until have enough that satisfy in/out constraints
 
         count = attempt = 0
         while count < npart:
             attempt += 1
-            x = xlo + self.random() * xsize
-            y = ylo + self.random() * ysize
-            z = zlo + self.random() * zsize
+            x = xlo + np.random.random() * xsize
+            y = ylo + np.random.random() * ysize
+            z = zlo + np.random.random() * zsize
+            # x = xlo + self.random() * xsize
+            # y = ylo + self.random() * ysize
+            # z = zlo + self.random() * zsize
+            # print(x, y, z)
             if not in_obj.inside(x, y, z):
                 continue
             if out_id and out_obj.inside(x, y, z):
@@ -666,7 +686,9 @@ class cdata:
         obj.xyz = []
 
         on_obj = self.objs[self.ids[on_id]]
-        if on_obj.style != SURFACE and on_obj.style != REGION and on_obj.style != UNION:
+        if (on_obj.style != SURFACE
+           and on_obj.style != REGION
+           and on_obj.style != UNION):
             sys.exit("Illegal ID to place particles on")
         totalarea = on_obj.area()
 
@@ -1478,7 +1500,8 @@ class Surface:
     # project 3d triangles to xy plane
     # only need examine triangles in bin that point is in
     # if pt is outside bins, don't need to check
-    # x,y,z is inside surf if line segment intersects an odd number of triangles
+    # x,y,z is inside surf if line segment intersects
+    # an odd number of triangles
     # intersection test:
     #   is xy pt in bounding rectangle of tri in xy plane ?
     #   is xy pt inside tri in xy plane (including edges and vertices) ?
@@ -1488,6 +1511,7 @@ class Surface:
     def inside(self, x, y, z):
         ix = int((x - self.xlo) * self.dxinv)
         iy = int((y - self.ylo) * self.dyinv)
+        print(ix, self.nbinx, iy, self.nbiny)
         if ix < 0 or ix >= self.nbinx or iy < 0 or iy >= self.nbiny:
             return 0
         n = len(self.bin[ix][iy])
@@ -1513,12 +1537,13 @@ class Surface:
                 continue
 
             # is x,y inside 2d triangle ?
-            # cross product of each edge with vertex-to-point must have same sign
+            # cross product of each edge
+            # with vertex-to-point must have same sign
             # cross product = 0 is OK, means point is on edge or vertex
 
-            c1 = (v2[0] - v1[0]) * (y - v1[1]) - (v2[1] - v1[1]) * (x - v1[0])
-            c2 = (v3[0] - v2[0]) * (y - v2[1]) - (v3[1] - v2[1]) * (x - v2[0])
-            c3 = (v1[0] - v3[0]) * (y - v3[1]) - (v1[1] - v3[1]) * (x - v3[0])
+            c1 = (v2[0]-v1[0]) * (y-v1[1]) - (v2[1]-v1[1]) * (x-v1[0])
+            c2 = (v3[0]-v2[0]) * (y-v2[1]) - (v3[1]-v2[1]) * (x-v2[0])
+            c3 = (v1[0]-v3[0]) * (y-v3[1]) - (v1[1]-v3[1]) * (x-v3[0])
             if c1 < 0:
                 if c2 > 0 or c3 > 0:
                     continue
@@ -1534,9 +1559,10 @@ class Surface:
             # represent x,y point in basis of 2 triangle edge vectors
             # p = (x,y) - v1, v = v2 - v1, w = v3 - v2
             # find alpha,beta such that p = alpha v + beta w
-            #   by solving system of 2 linear eqs for their intersection
-            # denom (vx - vy * wx/xy) cannot be 0 since would imply vx/vy = wx/wy
-            #   and thus e1 would be parallel to e2
+            # by solving system of 2 linear eqs for their intersection
+            # denom (vx - vy * wx/xy) cannot be 0
+            # since would imply vx/vy = wx/wy
+            # and thus e1 would be parallel to e2
             # if wy = 0, vy cannot be 0, since e1 would be parallel to e2
 
             px = x - v1[0]

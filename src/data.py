@@ -277,11 +277,12 @@ class data:
                         )
                     )
                 else:
-                    f.write("{}\n".format(self.headers[keyword], keyword))
+                    f.write("{} {}\n".format(self.headers[keyword], keyword))
         for pair in skeywords:
             keyword = pair[0]
             if keyword in self.sections:
                 f.write("\n%s\n" % keyword)
+                f.write("\n")
                 for line in self.sections[keyword]:
                     f.write("{}\n".format(line))
         f.close()

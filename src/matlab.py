@@ -17,6 +17,7 @@
 #   allow choice of JPG or PNG or GIF when saving via "saveas" command
 #   have vec/array import/export functions to pass variables between
 #     Pizza.py and MatLab and have them named in MatLab
+#   WARNING: I HAVE NO MATLAB LICENSE TO TEST THIS LIB (G.CLAVIER)
 
 # Variables
 #   current = index of current figure (1-N)
@@ -95,6 +96,8 @@ m.curve(N,'b','-','v')         set color, line style, symbol of curve N
 # Imports and external programs
 
 import os
+import subprocess
+import sys
 
 try:
     from DEFAULTS import PIZZA_MATLAB
@@ -109,7 +112,7 @@ class matlab:
     # --------------------------------------------------------------------
 
     def __init__(self):
-        self.MATLAB = os.popen(PIZZA_MATLAB, "w")
+        self.MATLAB = subprocess.Popen([PIZZA_MATLAB])
         self.file = "tmp.matlab"
         self.figures = []
         self.select(1)
@@ -148,9 +151,9 @@ class matlab:
             if len(vectors) % 2:
                 sys.exit("vectors must come in pairs")
             for i in range(0, len(vectors), 2):
-                file = self.file + ".%d.%d" % (self.current, i / 2 + 1)
+                file = self.file + ".%d.%d" % (self.current, i // 2 + 1)
                 self.export(file, vectors[i], vectors[i + 1])
-            self.figures[self.current - 1].ncurves = len(vectors) / 2
+            self.figures[self.current - 1].ncurves = len(vectors) // 2
         self.draw()
 
     # --------------------------------------------------------------------

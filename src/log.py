@@ -95,6 +95,7 @@ class log:
         self.ptr = {}
         self.data = []
         self.runs = []
+        self.split = False
 
         # flist = list of all log file names
 
@@ -156,8 +157,10 @@ class log:
     # --------------------------------------------------------------------
 
     def get(self, *keys):
-        if len(keys) == 0:
-            sys.exit("no log vectors specified")
+        required = []
+        if len(keys) != 0:
+            for key in keys:
+                required.append(key.lower())
 
         # mapl = []
         # for key in keys:
@@ -174,37 +177,40 @@ class log:
         #         else:
         #             sys.exit("unique log vector {} not found".format(key))
 
-        required = []
-        for key in keys:
-            required.append(key.lower())
-
         runs = []
         for r in self.runs:
             vecs = []
-            for k in required:
+            if required:
+                for k in required:
+                    v = []
+                    for fi in r.fields:
+                        field_str = fi.decode("utf-8")
+                        if field_str.lower() == k:
+                            v.extend(r.data[fi])
+                    vecs.append(v)
+            else:
                 v = []
                 for fi in r.fields:
                     field_str = fi.decode("utf-8")
-                    if field_str.lower() == k:
-                        v.extend(r.data[fi])
+                    v.extend(r.data[fi])
                 vecs.append(v)
+
             runs.append(vecs)
         # for i in range(len(keys)):
         #     vecs.append(self.nlen * [0])
         #     for j in range(self.nlen):
         #         vecs[i][j] = self.data[j][mapl[i]]
-        print(runs)
 
         return runs
 
     # --------------------------------------------------------------------
 
-    def write(self, filename, split, *keys):
+    def write(self, filename, *keys):
         restrict = []
         for key in keys:
             restrict.append(key.lower())
 
-        if split:
+        if self.split:
             for i, r in enumerate(self.runs):
                 fname = ''.join([filename, '.run', str(i)])
                 with open(fname, "w") as f:
@@ -233,6 +239,7 @@ class log:
                     fields = []
                     for fi in r.fields:
                         field_str = fi.decode("utf-8")
+                        print(field_str)
                         if restrict and field_str.lower() not in restrict:
                             continue
                         else:
@@ -373,7 +380,7 @@ class log:
 
             # Finding fields for current run
             if r.style == 2:
-                eol = txt.find(b" \n", s1)
+                eol = txt.find(b"\n", s1)
                 # print(s1, eol)
                 fields = txt[s1:eol].split()
                 # print(fields)

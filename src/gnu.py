@@ -84,9 +84,8 @@ g.curve(N,'r')                 set color of curve N
 
 # Imports and external programs
 
-import types
-import os
 import sys
+import subprocess
 
 try:
     from DEFAULTS import PIZZA_GNUPLOT
@@ -106,7 +105,14 @@ class gnu:
     # --------------------------------------------------------------------
 
     def __init__(self):
-        self.GNUPLOT = os.popen(PIZZA_GNUPLOT, "w")
+        try:
+            self.GNUPLOT = subprocess.Popen([PIZZA_GNUPLOT],
+                                            stdin=subprocess.PIPE,
+                                            stdout=subprocess.PIPE
+                                            )
+        except Exception as e:
+            print(e)
+            sys.exit("Command {} not found.".format(PIZZA_GNUPLOT))
         self.file = "tmp.gnu"
         self.figures = []
         self.select(1)
@@ -120,8 +126,10 @@ class gnu:
     # --------------------------------------------------------------------
 
     def __call__(self, command):
-        self.GNUPLOT.write(command + "\n")
-        self.GNUPLOT.flush()
+        # print(command)
+        # Could not find a way to do it properly with communicate or another
+        # method
+        self.GNUPLOT.stdin.write(''.join([command, "\n"]).encode("ascii"))
 
     # --------------------------------------------------------------------
 
@@ -138,7 +146,7 @@ class gnu:
     def plot(self, *vectors):
         if len(vectors) == 1:
             file = self.file + ".%d.1" % self.current
-            linear = range(len(vectors[0]))
+            linear = list(range(len(vectors[0])))
             self.export(file, linear, vectors[0])
             self.figures[self.current - 1].ncurves = 1
         else:
@@ -182,6 +190,7 @@ class gnu:
 
     def export(self, filename, *vectors):
         n = len(vectors[0])
+        print(vectors)
         for vector in vectors:
             if len(vector) != n:
                 sys.exit("vectors must be same length")
@@ -224,12 +233,8 @@ class gnu:
         self.__call__("set terminal postscript enhanced solid lw 2 color portrait")
         cmd = "set output '%s.eps'" % file
         self.__call__(cmd)
-        if os.path.exists("tmp.done"):
-            os.remove("tmp.done")
         self.draw()
         self.__call__("!touch tmp.done")
-        while not os.path.exists("tmp.done"):
-            continue
         self.__call__("set output")
         self.select(self.current)
 
@@ -358,12 +363,12 @@ class gnu:
         else:
             self.__call__("unset logscale y")
         if fig.xlimit:
-            cmd = "set xr [" + str(fig.xlimit[0]) + ":" + str(fig.xlimit[1]) + "]"
+            cmd = "set xr ["+str(fig.xlimit[0])+":"+str(fig.xlimit[1])+"]"
             self.__call__(cmd)
         else:
             self.__call__("set xr [*:*]")
         if fig.ylimit:
-            cmd = "set yr [" + str(fig.ylimit[0]) + ":" + str(fig.ylimit[1]) + "]"
+            cmd = "set yr ["+str(fig.ylimit[0])+":"+str(fig.ylimit[1])+"]"
             self.__call__(cmd)
         else:
             self.__call__("set yr [*:*]")
@@ -381,9 +386,9 @@ class gnu:
         for i in range(fig.ncurves):
             file = self.file + ".%d.%d" % (self.current, i + 1)
             if len(fig.colors) > i and fig.colors[i]:
-                cmd += "'" + file + "' using 1:2 with line %d, " % fig.colors[i]
+                cmd += "'"+file+"' using 1:2 with line linecolor %d, " % fig.colors[i]
             else:
-                cmd += "'" + file + "' using 1:2 with lines, "
+                cmd += "'"+file+"' using 1:2 with lines, "
         self.__call__(cmd[:-2])
 
 
