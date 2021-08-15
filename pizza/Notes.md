@@ -23,3 +23,5 @@
   - And also make it dependent on glumpy and PyQt, that looks more reasonable
   - This imply dropping several libs actually. Inclugind gl.
 * The whole matlab.py and gnu.py could be replaced by matplotlib.
+
+* This is a test modification
