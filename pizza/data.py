@@ -139,7 +139,7 @@ class data:
             found = 0
             for pair in skeywords:
                 keyword, length = pair[0], pair[1]
-                if keyword == line:
+                if keyword in line:
                     found = 1
                     if length not in headers:
                         sys.exit("data section %s has no matching header value" % line)
